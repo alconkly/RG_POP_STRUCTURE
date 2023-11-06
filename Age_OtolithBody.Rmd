@@ -1,0 +1,229 @@
+---
+title: "Age Summary and Body OR"
+author: "Anna Conklyn"
+date: "9/14/2021"
+output: html_document
+---
+
+# **Structure and Condition of an Established Round Goby Population in the Thousand Islands Region, St. Lawrence River**
+## *Age summary and Body-Otolith Radius relationship*
+
+### Contents of Rmarkdown:
+  > 1. Summary table and histogram of round goby ages for both sexes and sites
+  > 2. Body otolith regression and statistical analyses
+  > 3. 
+
+
+
+```{r setup, include=FALSE}
+##Install packages
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(FSA)
+library(readxl)
+library(nlstools)
+library(magrittr)
+library(dplyr)
+library(plotrix)
+library(nnet)
+library(nls2)
+library(ggplot2)
+library(tidyr)
+library(broom)
+library(stargazer)
+library(plyr)
+library(gt)
+library(gtsummary)
+library(ggpubr)
+library(gtExtras)
+library(sjPlot)
+```
+
+
+```{r, include=FALSE}
+##Load data
+
+getwd()
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+RG <- read_excel("Pop_Strucutre_Dissected.xlsx")
+```
+
+
+
+```{r, include=FALSE}
+#5mm & 10mm length categories; remove unaged
+
+
+RG %<>% mutate(lcat5=lencat(Length, w=5)) %<>% mutate(lcat10=lencat(Length, w=10)) %<>% filter(!is.na(RG$Age))  %<>% mutate(logTL=log10(Length), logOR=log10(OR), Site=factor(Site)) 
+
+RG<- filter(RG, Sex!="I")
+
+headtail(RG)
+
+Male<- filter(RG, Sex== "M")
+Female<- filter(RG, Sex=="F")
+
+Rose<- filter(RG, Site=="Rose")
+Cobb<- filter(RG, Site=="Cobb")
+```
+
+
+## 1. Summary histogram of round goby ages for both sexes and sites
+
+### Hisogram of ages
+
+```{r, echo=FALSE}
+
+RG$Sex <- factor(RG$Sex, levels = c("M", "F", "I"),  labels = c("Male", "Female", "Immature"))
+
+(Age_plot<-ggplot(RG, aes(x=Age, y=..count.., fill=Site)) + geom_bar(binwidth=1, color="black", position=position_dodge(0.9, preserve = "single")) + facet_grid(cols = vars(RG$Sex)) + labs(x = "Age",  y = "Count") + scale_fill_grey() + theme_classic () + xlim(0,5)+ theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+(MAge_plot<-ggplot(Male, aes(x=Age, y=..count.., fill=Site)) + geom_bar(color="black", position=position_dodge(0.9, preserve = "single")) + labs(x = "Age",  y = "Count", title = "Male") + ylim(0,80) + scale_fill_grey() + theme_classic () + xlim(0,5) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+(FAge_plot<-ggplot(Female, aes(x=Age, y=..count.., fill=Site)) + geom_bar(color="black", position=position_dodge(0.9, preserve = "single")) + labs(x = "Age",  y = "Count", title = "Female") + ylim(0,80) + scale_fill_grey() + theme_classic () + xlim(0,5) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+(Ageplot <- ggarrange(MAge_plot, FAge_plot,
+                    nrow = 2, common.legend = TRUE, legend="bottom"))
+
+ggsave("AgeCounts.jpeg", device="jpeg", plot=Ageplot, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+```
+
+
+### Summary tables of round goby ages by length category for each sex
+```{r echo=FALSE}
+
+library(kableExtra)
+MaleAge<- xtabs(~  Age + lcat10, data=Male)
+MaleAge<- as.data.frame.matrix(MaleAge)
+MaleAge<-t(MaleAge)
+MaleAge<- as.data.frame(MaleAge)
+MaleAge$Lcat<-row.names(MaleAge)
+(MaleAge_Table<- gt(MaleAge, rowname_col = "Lcat") %>%
+    tab_stubhead(label = "Length Interval (cm)"))
+colnames(MaleAge)<- c("Male.1",    "Male.2" ,   "Male.3" ,   "Male.4" ,   "Male.5" ,   "Lcat")
+MaleAge$Lcat<- as.numeric(MaleAge$Lcat)
+MaleAge$Lcat<-sort(MaleAge$Lcat, decreasing = FALSE)
+
+
+
+FemaleAge<- xtabs(~  Age + lcat10, data=Female)
+FemaleAge<- as.data.frame.matrix(FemaleAge)
+FemaleAge<-t(FemaleAge)
+FemaleAge<- as.data.frame(FemaleAge)
+FemaleAge$Lcat<-row.names(FemaleAge)
+(FemaleAge_Table<- gt(FemaleAge, rowname_col = "Lcat") %>%
+    tab_stubhead(label = "Length Interval (cm)"))
+colnames(FemaleAge)<- c("Female.1",    "Female.2" ,   "Female.3" ,   "Female.4" ,   "Female.5" ,   "Lcat")
+FemaleAge$Lcat<- as.numeric(FemaleAge$Lcat)
+FemaleAge$Lcate<-sort(FemaleAge$Lcat, decreasing = FALSE)
+
+Age_Length<- merge(MaleAge, FemaleAge, by.x="Lcat", all = TRUE)
+
+
+Age_Length$Lcat<- as.numeric(Age_Length$Lcat)
+Age_Length$Lcat<-sort(Age_Length$Lcat, decreasing = FALSE)
+
+
+(Age_Length_table<- gt (Age_Length, rowname_col = "Lcat", groupname_col = "Sex") %>%
+    tab_stubhead(label = "Length Interval (mm)") %>%
+    tab_spanner_delim(delim = ".") %>% 
+    tab_options(column_labels.font.weight = "bold", row_group.font.weight = "bold", table.align = "left") %>% 
+  sub_missing(
+  columns = everything(),
+  rows = everything(),
+  missing_text = ("0"))  %>%  
+    tab_header(
+    title = md ("**Age group (years)**" )) %>%
+  summary_rows(columns = everything(), fns = list(Total = ~sum(., na.rm = TRUE)), formatter = fmt_number, decimals = 0) %>% 
+  cols_width(vars(Lcat) ~ px(100),
+    everything() ~ px(60)
+  ) %>% cols_hide(columns = "Lcate") )
+
+Age_Length_table %>% gtsave(filename="Age_Length_table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+
+
+```
+
+
+## 2. Body otolith regression and statistical analyses
+
+### Scatterplot of otolith radius vs. total length
+```{r, results='asis', echo=FALSE}
+RG$Sex<- factor(RG$Sex, levels = c("M", "F"), labels= c("Male", "Female"))
+
+ggplot(RG, aes(x=logOR, y=logTL)) + geom_point(aes(color=Site)) + facet_grid (rows=vars(Sex)) + theme_classic() + scale_color_manual(values=c("black", "gray")) + labs(x= "Log(Otolith Radius) (mm)", y="Log (Total Length) (mm)")+ theme(legend.position="bottom")+ geom_smooth(method = "lm", aes(group = Site, color=Site, linetype=Site))
+
+
+(MaleOR_plot<-ggplot(Male, aes(x=logOR, y=logTL)) + geom_point(aes(color=Site)) + theme_classic() + scale_color_manual(values=c("black", "gray")) + labs(x= "Log(Otolith Radius) (mm)", y="Log (Total Length) (mm)", title = "Male")+ theme(legend.position="bottom")+ geom_smooth(method = "lm", aes(group = Site, color=Site, linetype=Site)) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylim(1,3)+ xlim(0,0.6))
+
+
+(FemaleOR_plot<-ggplot(Female, aes(x=logOR, y=logTL)) + geom_point(aes(color=Site)) + theme_classic() + scale_color_manual(values=c("black", "gray")) + labs(x= "Log(Otolith Radius) (mm)", y="Log (Total Length) (mm)", title = "Female")+ theme(legend.position="bottom")+ geom_smooth(method = "lm", aes(group = Site, color=Site, linetype=Site)) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylim(1,3) + xlim(0,0.6))
+
+(ORplot <- ggarrange(MaleOR_plot, FemaleOR_plot,
+                    nrow = 2, common.legend = TRUE, legend="bottom"))
+
+ggsave("OR_TL.jpeg", device="jpeg", plot=ORplot, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+
+```
+
+
+### Linear regression fitting of otolith radius vs. total length, Summary tables and F tests for equality of slope between sexes and sites
+
+#### Differences between sites for each sex
+```{r, echo=FALSE, results='asis'}
+
+M_BodyOR<- lm(logTL ~ logOR * Site, data=Male) 
+(MSummary<- summary(M_BodyOR))
+
+F_BodyOR<- lm(logTL ~ logOR * Site, data=Female) 
+(FSummary<- summary(F_BodyOR))
+
+(MOR_Table<- tbl_regression(M_BodyOR) %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}"))
+
+FOR_Table<- tbl_regression(F_BodyOR) %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))%>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") 
+
+Sex_OR_Table<- tbl_merge(
+    tbls = list(MOR_Table, FOR_Table),
+    tab_spanner = c("**Male**", "**Female**")
+  ) %>% as_gt()
+ 
+ Sex_OR_Table %>% gtsave(filename="Sex_OR_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+
+```
+
+#### Differences between sexes for each site
+```{r, echo=FALSE, results='asis'}
+Rose_BodyOR<- lm(logTL ~ logOR * Sex, data=Rose) 
+RoseORSummary<- summary(Rose_BodyOR)
+
+Cobb_BodyOR<- lm(logTL ~ logOR * Sex, data=Cobb)
+CobbORSummary<- summary(Cobb_BodyOR)
+
+(RoseOR_Table<- tbl_regression(Rose_BodyOR) %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}"))
+
+CobbOR_Table<- tbl_regression(Cobb_BodyOR) %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))%>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") 
+
+Site_OR_Table<- tbl_merge(
+    tbls = list(RoseOR_Table, CobbOR_Table),
+    tab_spanner = c("**Rose**", "**Cobb**")
+  ) %>% as_gt()
+ 
+ Site_OR_Table %>% gtsave(filename="Site_OR_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+```
+

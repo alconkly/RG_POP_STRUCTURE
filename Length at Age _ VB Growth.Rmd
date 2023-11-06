@@ -1,0 +1,576 @@
+---
+title: "Length at Age & VB Growth "
+author: "Anna Conklyn"
+date: "9/26/2022"
+output: html_document
+---
+
+# **Structure and Condition of an Established Round Goby Population in the Thousand Islands Region, St. Lawrence River**
+## *Length at Age and Von Bertalanffy growth of observed data*
+
+### Contents of Rmarkdown:
+  > 1. Length at age models for each combination of sex and site 
+  > 2. Von Bertalanffy growth curves
+  > 3. 
+Install packages
+
+```{r setup, include=FALSE}
+library(FSA)
+library(nlstools)
+library(magrittr)
+library(dplyr)
+library(plotrix)
+library(nnet)
+library(nls2)
+library(ggpubr)
+library(rlang)
+library(ggpubr)
+library(sjPlot)
+library(gt)
+library(gridExtra)
+library(grid)
+library(patchwork)
+library(kableExtra)
+library(gtsummary)
+library(webshot)
+```
+
+
+
+```{r, include=FALSE}
+#Load data
+
+getwd()
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+RG <- read_excel("Pop_Strucutre_Dissected.xlsx") 
+```
+
+## 1. Length at age models for each combination of sex and site
+#### Likelihood ratio tests to determine if age length keys are different 
+
+### All combined round gobies; LRT for differences between sexes
+
+```{r, include=FALSE}
+##5mm length categories; remove unaged
+
+RG %<>% mutate(lcat5=lencat(Total.Length, w=5)) %<>% filter(!is.na(RG$Age))
+
+headtail(RG)
+
+Male<- filter(RG, Sex== "M")
+Female<- filter(RG, Sex=="F")
+```
+
+
+```{r, echo=FALSE}
+(alk.freq<- xtabs(~lcat5+Age, data=RG))
+alk.prop<- (prop.table(alk.freq))
+round(alk.prop, 3)
+
+len<- xtabs(~lcat5, data=RG)
+
+alkMeanVar(alk.freq, Total.Length~lcat5+Age, data=RG, len.n = len)
+
+mod1 <- multinom(Age~lcat5,data=RG,maxit=500)
+mod2 <- multinom(Age~lcat5*Sex,data=RG,maxit=500)
+anova(mod1,mod2)
+
+mod1 <- multinom(Age~lcat5,data=RG,maxit=500)
+mod2 <- multinom(Age~lcat5*Site,data=RG,maxit=500)
+anova(mod1,mod2)
+
+```
+
+
+### Male round gobies; LRT for differences between sexes 
+
+```{r, echo=FALSE}
+(alk.freq.M<- xtabs(~lcat5+Age, data=Male))
+alk.prop.M<- (prop.table(alk.freq.M))
+
+round(alk.prop.M, 3)
+
+len.M<- xtabs(~lcat5, data=Male)
+
+alkMeanVar(alk.freq.M, Total.Length~lcat5+Age, data=Male, len.n = len.M)
+
+Mmod1 <- multinom(Age~lcat5,data=Male,maxit=500)
+Mmod2 <- multinom(Age~lcat5*Site,data=Male,maxit=500)
+anova(Mmod1,Mmod2)
+```
+### Female round gobies; LRT for differences between sexes
+
+```{r, echo=FALSE}
+(alk.freq.F<- xtabs(~lcat5+Age, data=Female))
+alk.prop.F<- (prop.table(alk.freq.F))
+
+round(alk.prop.F, 3)
+
+len.F<- xtabs(~lcat5, data=Female)
+
+alkMeanVar(alk.freq.F, Total.Length~lcat5+Age, data=Female, len.n = len.F)
+
+Fmod1 <- multinom(Age~lcat5,data=Female,maxit=500)
+Fmod2 <- multinom(Age~lcat5*Site,data=Female,maxit=500)
+anova(Fmod1,Fmod2)
+```
+
+
+
+## 2. Von Bertalanffy growth curves
+
+### Male Von Bertalanffy
+
+```{r, echo=FALSE}
+(MVB <- vbStarts(Total.Length~Age,data=Male))
+mTyp<- list(Linf=max(Male$Length, na.rm=TRUE), K=0.24, t0=-2.23)
+            
+mfun<- function(age, Linf, K, t0) Linf*(1-exp(-K*(age-t0)))
+           
+fitMVB <-nls(Total.Length~mfun(Age, Linf,K,t0), data=Male, start=MVB)
+coef(fitMVB)
+confint(fitMVB)
+bootMVB <- nlsBoot(fitMVB)
+headtail(bootMVB$coefboot,n=2)
+summary(fitMVB,correlation=TRUE)
+
+
+(x<- seq(0, 6, length.out=7))
+
+(pMVB<- mfun(x, Linf=262.03, K=0.31677, t0=-0.26853))
+
+xlmts<-range(c(x, Male$age))
+(ylmts<- range(c(pMVB,Male$Length)))
+
+plot(Total.Length~Age, data=Male, xlab="Age", ylab="Total Length (mm)", xlim=xlmts, ylim=ylmts, pch=19, col=rgb(0,0,0,1/3))
+lines(pMVB~x, lwd=2)
+
+```
+
+
+### Male growth site comparison
+
+```{r, echo=FALSE}
+Male$Site<- as.factor(Male$Site)
+
+vbLKt <- Total.Length~Linf[Site]*(1-exp(-K[Site]*(Age-t0[Site])))
+vbLK <- Total.Length~Linf[Site]*(1-exp(-K[Site]*(Age-t0)))
+vbLt <- Total.Length~Linf[Site]*(1-exp(-K*(Age-t0[Site])))
+vbKt <- Total.Length~Linf*(1-exp(-K[Site]*(Age-t0[Site])))
+vbL <- Total.Length~Linf[Site]*(1-exp(-K*(Age-t0)))
+vbK <- Total.Length~Linf*(1-exp(-K[Site]*(Age-t0)))
+vbt <- Total.Length~Linf*(1-exp(-K*(Age-t0[Site])))
+vbO <- Total.Length~Linf*(1-exp(-K*(Age-t0)))
+
+
+(MaleLKt<- Map(rep, MVB, c(2,2,2)))
+MfitLKt <- nls(vbLKt,data=Male,start=MaleLKt)
+summary(MfitLKt)
+
+Mfit0 <- nls(vbO,data=Male,start=MVB)
+
+MVB_lrt<-lrt(Mfit0,com=MfitLKt,com.name="All pars differ",
+sim.names="No pars differ")
+MVB_lrt$test<- "Likelihood Ratio Test"
+
+MVB_eSS<-extraSS(Mfit0,com=MfitLKt,com.name="All pars diff",
+sim.names="No pars diff")
+MVB_eSS$test<- "extra Sum of Squares"
+
+MVB_Stat<- rbind(MVB_lrt, MVB_eSS)
+
+
+  ## Conlcusion- there is a significant difference between parameters
+```
+
+
+```{r}
+msvLK<-Map(rep, MVB, c(2,2,1))
+msvLt<- Map(rep, MVB, c(2,1,2))
+msvKt<- Map(rep, MVB, c(1,2,2))
+
+
+MfitLK<-nls(vbLK,data=Male,start=msvLK)
+MfitLt<-nls(vbLt,data=Male,start=msvLt)
+MfitKt<-nls(vbKt,data=Male,start=msvKt)
+
+MLRT<-lrt(MfitLK, MfitLt, MfitKt,com=MfitLKt,com.name="All pars diff",
+sim.names=c("Linf,K diff","Linf,t0 diff","K,t0 diff"))
+
+MESS<- extraSS(MfitLK, MfitLt, MfitKt,com=MfitLKt,com.name="All pars diff",
+sim.names=c("Linf,K diff","Linf,t0 diff","K,t0 diff"))
+
+MVB_Test<- rbind(MLRT, MESS)
+
+
+##Conclusion- {L,t0}, {K, t0} fit the data; use {L, T0} for further selection because it has the greatest log-likelihood value
+```
+
+
+```{r}
+MsvL <- Map(rep,MVB,c(2,1,1))
+Msvt <- Map(rep,MVB,c(1,1,2))
+MsvK<- Map(rep, MVB, c(1, 2, 1))
+
+MfitL <- nls(vbL,data=Male,start=MsvL)
+Mfitt <- nls(vbt,data=Male,start=Msvt)
+MfitK<- nls(vbK, data=Male, start=MsvK)
+lrt(MfitL,Mfitt,com=MfitLt,com.name="Linf,t0 dif",
+sim.names=c("Linf dif","t0 dif"))
+
+(MaleVB_model<- tab_model(Mfit0, MfitL, MfitK, Mfitt, MfitLK, MfitLt, MfitKt, MfitLKt, 
+          collapse.ci = TRUE, show.fstat = TRUE , show.aic = TRUE, show.loglik = TRUE,
+          p.style = "numeric_stars",  CSS = list(css.table = '+font-family: Arial;', file="VB_Male.doc"), auto.label = TRUE))
+
+
+## {L} and {t0} fit the model 
+```
+
+
+```{r}
+cbind(AIC(MfitLKt,MfitLK,MfitLt,MfitKt,MfitL,MfitK,Mfitt,Mfit0),
+BIC(MfitLKt,MfitLK,MfitLt,MfitKt,MfitL,MfitK,Mfitt,Mfit0))
+
+## the t0 model has the lowest AIC and BIC, would be the best model
+```
+
+Summarizing model fit for males
+
+```{r}
+##Rose
+vbTyp <- vbFuns("typical")
+rgMr<- filter(Male, Site=="Rose")
+rgMr$Total.Length<- as.numeric(rgMr$Total.Length)
+
+fitMr<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=rgMr, start=MVB)
+bMr <- nlsBoot(fitMr)
+cbind(coef(fitMr),confint(bMr))
+MR_VBSum<- summary(fitMr)
+
+```
+
+```{r}
+##Cobb
+rgMc<- filter(Male, Site=="Cobb")
+rgMc$Length<- as.numeric(rgMc$Total.Length)
+
+fitMc<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=rgMc, start=MVB)
+bMc <- nlsBoot(fitMc)
+cbind(coef(fitMr),confint(bMc))
+MC_VBSum<- summary(fitMc)
+```
+
+
+```{r}
+##Rose predictions
+xr<- seq(min(rgMr$Age), max(rgMr$Age), length.out=199)
+pr<- vbTyp(xr, Linf=coef(fitMr))
+
+##Cobb predictions
+xc<- seq(min(rgMc$Age), max(rgMc$Age), length.out=199)
+pc<- vbTyp(xc, Linf=coef(fitMc))
+
+xlmts<- range(c(xr, xc))
+ylmts<- range(c(rgMr$Length, rgMc$Length))
+
+roseMVB<-as.data.frame(cbind(xr,pr))
+cobbMVB<- as.data.frame(cbind(xc, pc))
+
+```
+
+
+```{r}
+(MaleVBPlot1<- ggplot(data=Male, aes(color=Site))+geom_point(aes(x=Age, y=Total.Length, shape=Site))+ scale_color_manual(values = c("Rose"= "black","Cobb"="grey"))  + theme_classic ()  + labs(x = "Age",  y = "Total Length (mm)") + ylim(50,230) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + geom_line(data=roseMVB, aes(x=xr, y=pr), colour=I("black")) + ggtitle("Male") + geom_line(data=cobbMVB,aes(x=xc, y=pc), colour=I("gray")))
+
+ggsave("M_VBGrowth.jpeg", device="jpeg", plot=MaleVBPlot1, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+
+```{r}
+MVB<-rbind(fitMc,fitMr)
+
+MrVB_Table<- tbl_regression(fitMr)%>%  
+  add_significance_stars(hide_p = FALSE, pattern = "{p.value}") %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))  
+
+McVB_Table<- tbl_regression(fitMc) %>%  
+  add_significance_stars(hide_p = FALSE,  pattern = "{p.value}") %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))
+
+
+    ```
+
+
+
+Female; length age
+
+```{r}
+(alk.freq.F<- xtabs(~lcat5+Age, data=Female))
+alk.prop.F<- (prop.table(alk.freq.F))
+
+round(alk.prop.F, 3)
+
+alkPlot(alk.prop.F,type="area",pal="gray",showLegend=TRUE,leg.cex=0.7,xlab="Total Length (mm)")
+
+alkPlot(alk.prop.F,type="bubble",xlab="Total Length (mm)")
+
+len.F<- xtabs(~lcat5, data=Female)
+
+alkMeanVar(alk.freq.F, Total.Length~lcat5+Age, data=Female, len.n = len.F)
+
+Fmod1 <- multinom(Age~lcat5,data=Female,maxit=500)
+Fmod2 <- multinom(Age~lcat5*Site,data=Female,maxit=500)
+anova(Fmod1,Fmod2)
+
+
+(FVB <- vbStarts(Total.Length~Age,data=Female))
+FTyp<- vbFuns()
+(fitFVB<- nls2(Total.Length~FTyp(Age, Linf, K, t0), data=Female, start=FVB, control = list(maxiter = 10000, minFactor = 1/2048)))
+
+
+x<- seq(0,6, length.out=199)
+pFVB<- FTyp(x,Linf=coef(fitFVB))
+xlmts<-range(c(x, Female$age))
+ylmts<- range(c(pFVB, Female$Length))
+
+plot(Total.Length~Age, data=Female, xlab="Age", ylab="Total Length (mm)", xlim=xlmts, ylim=ylmts, pch=19, col=rgb(0,0,0,1/3))
+lines(pFVB~x, lwd=2)
+```
+
+
+
+
+Female Von Bertalanffy
+
+```{r}
+(FVB <- vbStarts(Total.Length~Age,data=Female))
+fTyp<- list(Linf=105.2999, K=0.8056174, t0=-1.255391)
+            
+ffun<- function(age, Linf, K, t0) Linf*(1-exp(-K*(age-t0)))
+           
+fitFVB <-nls(Total.Length~ffun(Age, Linf,K,t0), data=Female, start=FVB)
+coef(fitFVB)
+bootFVB <- nlsBoot(fitFVB)
+headtail(bootFVB$coefboot,n=2)
+summary(fitFVB,correlation=TRUE)
+
+
+(x<- seq(0, 6, length.out=199))
+
+(pFVB<- ffun(x, Linf=127.1873, K=0.2763, t0=-2.7931))
+
+xlmts<-range(c(x, Female$Age))
+(ylmts<- range(c(pFVB,Female$Length)))
+
+plot(Total.Length~Age, data=Female, xlab="Age", ylab="Total Length (mm)", xlim=xlmts, ylim=ylmts, pch=19, col=rgb(0,0,0,1/3))
+lines(pFVB~x, lwd=2)
+
+
+##Need to log-transform
+
+Female$LogLength<-log(Female$Total.Length)
+
+(logFVB <- vbStarts(LogLength~Age,data=Female))
+logfTyp<- list(Linf=4.638302, K=0.7862856, t0=-3.014121)
+
+fitlogFVB <-nls(LogLength~ffun(Age, Linf,K,t0), data=Female, start=logFVB)
+coef(fitlogFVB)
+bootlogFVB <- nlsBoot(fitlogFVB)
+headtail(bootlogFVB$coefboot,n=2)
+summary(fitlogFVB,correlation=TRUE)
+
+(x<- seq(0, 6, length.out=199))
+
+(plogFVB<- ffun(x, Linf=4.7606, K=0.4187, t0=-5.1522))
+
+xlmts<-range(c(x, Female$Age))
+(ylmts<- range(c(plogFVB,Female$LogLength)))
+
+plot(LogLength~Age, data=Female, xlab="Age", ylab="log(Total Length) (mm)", xlim=xlmts, ylim=ylmts, pch=19, col=rgb(0,0,0,1/3))
+lines(plogFVB~x, lwd=2)
+
+
+
+```
+
+
+Female site comparison
+
+```{r, eval = FALSE}
+Female$Site<- as.factor(Female$Site)
+
+vbLKt <- Length~Linf[Site]*(1-exp(-K[Site]*(Age-t0[Site])))
+vbLK <- Length~Linf[Site]*(1-exp(-K[Site]*(Age-t0)))
+vbLt <- Length~Linf[Site]*(1-exp(-K*(Age-t0[Site])))
+vbKt <- Length~Linf*(1-exp(-K[Site]*(Age-t0[Site])))
+vbL <- Length~Linf[Site]*(1-exp(-K*(Age-t0)))
+vbK <- Length~Linf*(1-exp(-K[Site]*(Age-t0)))
+vbt <- Length~Linf*(1-exp(-K*(Age-t0[Site])))
+vbO <- Length~Linf*(1-exp(-K*(Age-t0)))
+
+
+(FemaleLKt<- Map(rep, FVB, c(2,2,2)))
+
+FfitLKt <- nls(vbLKt,data=Female,start=FemaleLKt, control=list(maxiter=1000000000,minFactor=1/10000000000))  ####Won't converge.
+
+#Ffit0 <- nls(vbO,data=Female,start=logFVB)
+
+#lrt(Ffit0,com=FfitLKt,com.name="All pars differ",
+#sim.names="No pars differ")
+
+#extraSS(Ffit0,com=FfitLKt,com.name="All pars diff",
+#sim.names="No pars diff")
+
+```
+
+
+```{r, eval = FALSE}
+fsvLK<-Map(rep, FVB, c(2,2,1))
+fsvLt<- Map(rep, FVB, c(2,1,2))
+fsvKt<- Map(rep, FVB, c(1,2,2))
+
+
+FfitLK<-nls(vbLK,data=Female,start=fsvLK)
+FfitLt<-nls(vbLt,data=Female,start=fsvLt)
+FfitKt<-nls(vbKt,data=Female,start=fsvKt)
+
+#lrt(FfitLK, FfitLt, FfitKt,com=FfitLKt,com.name="All pars diff",
+#sim.names=c("Linf,K diff","Linf,t0 diff","K,t0 diff"))
+
+#extraSS(FfitLK, FfitLt, FfitKt,com=FfitLKt,com.name="All pars diff",
+#sim.names=c("Linf,K diff","Linf,t0 diff","K,t0 diff"))
+
+##Conclusion- {L,t0}, {K, t0} fit the data; use {L, T0} for further selection because it has the greatest log-likelihood value
+```
+
+
+```{r, eval = FALSE}
+FsvL <- Map(rep,FVB,c(2,1,1))
+Fsvt <- Map(rep,FVB,c(1,1,2))
+FsvK<- Map(rep, FVB, c(1, 2, 1))
+
+FfitL <- nls(vbL,data=Female,start=FsvL)
+Ffitt <- nls(vbt,data=Female,start=Fsvt)
+FfitK<- nls(vbK, data=Female, start=FsvK)
+lrt(FfitL,Ffitt,com=FfitLt,com.name="Linf,t0 dif",
+sim.names=c("Linf dif","t0 dif"))
+
+(FemaleVB_model<- tab_model( FfitL, FfitK, Ffitt, FfitLK, FfitLt, FfitKt, 
+          collapse.ci = TRUE, show.fstat = TRUE , show.aic = TRUE, show.loglik = TRUE,
+          p.style = "numeric_stars",  CSS = list(css.table = '+font-family: Arial;', file="VB_Male.doc"), auto.label = TRUE))
+
+## {L} and {t0} fit the model 
+```
+
+
+```{r, eval = FALSE}
+F_VB_Tests<- cbind(AIC(FfitLK,FfitLt,FfitKt,FfitL,FfitK,Ffitt),
+BIC(FfitLK,FfitLt,FfitKt,FfitL,FfitK,Ffitt))
+
+
+
+## the t0 model has the lowest AIC and BIC, would be the best model
+```
+
+Summarizing model fit for females
+
+```{r}
+##Rose
+vbTyp <- vbFuns("typical")
+rgFr<- filter(Female, Site=="Rose")
+rgFr$Length<- as.numeric(rgFr$Length)
+
+fitFr<- nls(Length~vbTyp(Age, Linf, K, t0), data=rgFr, start=FVB)
+bFr <- nlsBoot(fitFr)
+cbind(coef(fitFr),confint(bFr))
+FR_VBSum<- summary(fitFr)
+print(FR_VBSum)
+
+(FrVB_Table<-tbl_regression(fitFr)%>%  
+  add_significance_stars(hide_p = FALSE, pattern = "{p.value}")  %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) )
+
+VB_Table<- tbl_merge(
+    tbls = list(MrVB_Table, McVB_Table, FrVB_Table),
+    tab_spanner = c("**Rose Male**", "**Cobb Male**", "**Rose Female**")
+  ) %>% as_gt()
+ 
+ VB_Table %>% gtsave(filename="VB_Table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+
+ 
+```
+
+```{r, eval = FALSE}
+##Cobb
+rgFc<- filter(Female, Site=="Cobb")
+rgFc$Length<- as.numeric(rgFc$Length)
+
+
+```
+
+
+```{r}
+##Rose predictions
+xfr<- seq(min(rgFr$Age), max(rgFr$Age), length.out=199)
+pfr<- vbTyp(xfr, Linf=coef(fitFr))
+
+##Cobb predictions
+xfc<- seq(min(rgFc$Age), max(rgFc$Age), length.out=199)
+
+
+xlmts<- range(c(xr, xc))
+ylmts<- range(c(rgFr$Length, rgFc$Length))
+
+roseFVB<- as.data.frame(cbind(xfr, pfr))
+
+
+```
+
+
+```{r}
+plot(Length~Age, data=Female, xlab="Age", ylab="Total Length (mm)", xlim=xlmts, ylim=ylmts, col="white")
+points(Length~Age, data=rgFr, pch=1, col="red", cex=0.8)
+points(Length~Age, data=rgFc, pch=8, col="blue", cex=0.8)
+lines(pr~xr,lwd=2,lty="solid", col="red")
+lines(pc~xc,lwd=2,lty="dashed", col="blue")
+legend("bottomright",c("Rose","Cobb"),pch=c(1,8),col=c("red", "blue"), lwd=2,lty=c("solid","dashed"),bty="n",cex=0.8)
+```
+
+
+```{r}
+(FemaleVBPlot<- ggplot(data=Female)+geom_point(aes(x=Age, y=Length, color=Site, shape=Site))+ theme_classic () + geom_line(data=roseFVB, aes(x=xfr, y=pfr), color="black") + labs(x = "Age",  y = "Total Length (mm)") + ylim(50,230) + scale_color_manual(values = c("Rose" = "black", "Cobb" = "grey")) + ggtitle("Female") +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")) 
+
+ggsave("F_VBGrowth.jpeg", device="jpeg", plot=FemaleVBPlot, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+```{r}
+(VBFigure <- ggarrange(MaleVBPlot1, FemaleVBPlot,
+                    nrow = 2, common.legend = TRUE, legend="bottom"))
+ annotate_figure(VBFigure, fig.lab.face = "bold", fig.lab.size=14)
+ 
+ ggsave("JOINED_VBGrowth.jpeg", device="jpeg", plot=VBFigure, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 9)
+```
+
+
+```{r}
+
+library(devtools)
+library(pander)
+
+(MR_coef<- MR_VBSum$coefficients)
+(MC_coef<- MC_VBSum$coefficients)
+(FR_coef<- FR_VBSum$coefficients)
+
+MR_coef %<>% kbl(caption = "Cobb Immature") %>%
+  kable_classic(full_width = F, html_font = "Cambria")
+
+
+MR_tab<- pander(MR_VBSum, summary=TRUE, add.significance.stars = TRUE)
+MC_tab<- pander(MC_VBSum, summary=TRUE, add.significance.stars = TRUE)
+FR_tab<- pander(FR_VBSum, summary=TRUE, add.significance.stars = TRUE)
+
+```
+

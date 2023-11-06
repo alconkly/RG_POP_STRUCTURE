@@ -1,0 +1,485 @@
+---
+title: "Mortality"
+author: "Anna Conklyn"
+date: "11/17/2022"
+output:
+  html_document: default
+  word_document: default
+---
+
+# **Structure and Condition of an Established Round Goby Population in the Thousand Islands Region, St. Lawrence River**
+
+## *Mortality*
+
+### Contents of Rmarkdown:
+
+    > 1. Catch-curve and Chapman-Robson plot creation
+    > 2. Linear regression fitting and survival estimate
+    > 3. Statistical comparisons
+    > 4. Publishable plot creation
+
+```{r setup, include=FALSE}
+library(FSA)
+library(nlstools)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+library(plotrix)
+library(nnet)
+library(nls2)
+library(ggpubr)
+library(rlang)
+library(readxl)
+library(ggpubr)
+library(sjPlot)
+library(gt)
+library(gridExtra)
+library(grid)
+library(patchwork)
+library(kableExtra)
+library(gtsummary)
+library(webshot)
+```
+
+```{r, include=FALSE}
+getwd()
+setwd("G:/POP_STRUCTURE_PUB/Data/Mortality")
+RG<- read_excel("Mortality.xlsx", col_names = TRUE)
+options(digits = 3)
+```
+
+```{r, include=FALSE}
+RG %<>% filter(!is.na(RG$Age))
+RGCounts_site<- RG %>% count(Age, Site, sort = TRUE)
+RGCounts_sex<- RG %>% count(Age, Sex, sort = TRUE)
+RGCounts_sex %<>% filter(Sex != "I")
+RGCounts<- RG %>% count(Age, Site, Sex, sort = TRUE)
+RGCounts %<>% filter(Sex != "I")
+
+Cobb<- filter(RG, Site=="Cobb")
+CCounts<- Cobb %>% count(Age)
+Rose<- filter(RG, Site== "Rose")
+RCounts<- Rose %>% count(Age)
+
+Male<- filter(RG, Sex== "M")
+Male %>% group_by(Site)
+MCounts<- Male %>% count(Age)
+CMale<- filter(Male, Site== "Cobb")
+RMale<- filter(Male, Site== "Rose")
+
+Female<- filter(RG, Sex== "F")
+Female %>% group_by(Site)
+(FCounts<- Female %>% count(Age))
+CFemale<- filter(Female, Site== "Cobb")
+RFemale<- filter(Female, Site== "Rose")
+
+
+(CMCounts<- CMale %>% count(Age))
+(RMCounts<- RMale %>% count(Age))
+(CFCounts<- CFemale %>% count(Age))
+(RFCounts<- RFemale %>% count(Age))
+```
+
+#### A=Annual mortality
+
+#### S= Annual Survival
+
+#### Z=instantaneous mortality rate
+
+$$\ A+S=1 $$ $$\ A=\frac{C_{t}-C_{t+1}}{C_{t}}=1-\frac{C_{t+1}}{C_{t}}$$ $$\ Z=log(C_{t})-log(C_{t+1})$$ $$\ A=1-e^{-Z} $$
+
+## 1. Catch-curve and Chapman-Robson plot creation
+
+Estimates Annual Survival Rate using:
+
+$$\widehat{S}= \frac{T}{n+T-1}=\frac{\overline{T}}{1+\overline{T}-\frac{1}{n}}$$
+
+### Sexes combined
+
+#### Cobb
+
+```{r, echo=FALSE}
+plot(log(n)~Age, data=CCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(Ccr <- chapmanRobson(n~Age,data=CCounts,ages2use=2:4))
+plot(Ccr)
+Group<- "Cobb"
+Measure<- c("S", "Z")
+Cobb_CR<-cbind(summary(Ccr, digits=2), confint(Ccr, digits=2))
+(Cobb_CR<- data.frame(Measure, Cobb_CR, Group))
+```
+
+#### Rose
+
+```{r, echo=FALSE}
+plot(log(n)~Age, data=RCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(Rcr <- chapmanRobson(n~Age,data=RCounts,ages2use=1:5))
+plot(Rcr)
+Group<- "Rose"
+Rose_CR<-cbind(summary(Rcr, digits=2), confint(Rcr, digits=2))
+(Rose_CR<- data.frame(Measure, Rose_CR, Group))
+```
+
+### Sites Combined
+
+#### Male
+
+```{r, echo=FALSE}
+plot(log(n)~Age, data=MCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(Mcr <- chapmanRobson(n~Age,data=MCounts,ages2use=3:5))
+plot(Mcr)
+Group<- "Male"
+Male_CR<-as_tibble(cbind(summary(Mcr, digits=2), confint(Mcr, digits=2)))
+(Male_CR<- data.frame(Measure, Male_CR, Group))
+```
+
+#### Female
+
+```{r, echo=FALSE}
+plot(log(n)~Age, data=FCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(Fcr <- chapmanRobson(n~Age,data=FCounts,ages2use=2:5))
+plot(Fcr)
+Group<- "Female"
+(Female_CR<-as_tibble(cbind(summary(Fcr,digits=3),confint(Fcr,digits=3))))
+(Female_CR<- data.frame(Measure, Female_CR, Group))
+```
+
+
+
+
+
+### Cobb Male
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=CMCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(MCcr <- chapmanRobson(n~Age,data=CMCounts,ages2use=3:4))
+plot(MCcr)
+```
+
+### Rose Male
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=RMCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(MRcr <- chapmanRobson(n~Age,data=RMCounts,ages2use=3:5))
+plot(MRcr)
+```
+
+### Cobb Female
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=CFCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(FCcr <- chapmanRobson(n~Age,data=CFCounts,ages2use=2:3))
+plot(FCcr)
+```
+
+### Rose Female
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=RFCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(FRcr <- chapmanRobson(n~Age,data=RFCounts,ages2use=1:5))
+plot(FRcr)
+```
+
+## 2. Linear regression fitting and survival estimate
+
+### Sexes combined
+
+#### Cobb
+
+```{r, echo=FALSE}
+Clmn <-filter(CCounts,Age>=2)
+Clmn %<>% mutate (lnct=log(n))
+
+CLm1<- lm(lnct~Age, data=Clmn)
+coef(CLm1)
+Clmn %<>% mutate(wts=predict(CLm1))
+
+CLm2<- lm(lnct~Age, data = Clmn, weights=wts)
+coef(CLm2)
+confint(CLm2)
+
+CCC<- catchCurve(n~Age, data=CCounts, ages2use = 2:4, weighted = TRUE)
+cbind(summary(CCC), confint(CCC))
+plot(CCC, pos.est = "bottomleft")
+```
+
+#### Rose
+
+```{r, echo=FALSE}
+Rlmn <-filter(RCounts,Age>=1)
+Rlmn %<>% mutate (lnct=log(n))
+
+RLm1<- lm(lnct~Age, data=Rlmn)
+coef(RLm1)
+Rlmn %<>% mutate(wts=predict(RLm1))
+
+RLm2<- lm(lnct~Age, data = Rlmn, weights=wts)
+coef(RLm2)
+confint(RLm2)
+
+RCC<- catchCurve(n~Age, data=RCounts, ages2use = 1:5, weighted = TRUE)
+cbind(summary(RCC), confint(RCC))
+plot(RCC, pos.est = "bottomleft")
+```
+
+### Sites combined
+
+#### Male
+
+```{r, echo=FALSE}
+Mlmn <-filter(MCounts,Age>=2)
+Mlmn %<>% mutate (lnct=log(n))
+
+MLm1<- lm(lnct~Age, data=Mlmn)
+coef(MLm1)
+Mlmn %<>% mutate(wts=predict(MLm1))
+
+MLm2<- lm(lnct~Age, data = Mlmn, weights=wts)
+coef(MLm2)
+confint(MLm2)
+
+MCC<- catchCurve(n~Age, data=MCounts, ages2use = 3:5, weighted = TRUE)
+cbind(summary(MCC), confint(MCC))
+plot(MCC, pos.est = "bottomleft")
+```
+
+#### Female
+
+```{r, echo=FALSE}
+Flmn <-filter(FCounts,Age>=2)
+Flmn %<>% mutate (lnct=log(n))
+
+FLm1<- lm(lnct~Age, data=Flmn)
+coef(FLm1)
+Flmn %<>% mutate(wts=predict(FLm1))
+
+FLm2<- lm(lnct~Age, data = Flmn, weights=wts)
+coef(FLm2)
+confint(FLm2)
+
+FCC<- catchCurve(n~Age, data=FCounts, ages2use = 2:5, weighted = TRUE)
+cbind(summary(FCC), confint(FCC))
+plot(FCC, pos.est = "bottomleft")
+```
+
+#### Cobb Male
+
+```{r, echo=FALSE}
+MClmn<- filter(CMCounts,Age>=3) %>% mutate(lnct=log(n))
+MClm<- lm(lnct~Age, data = MClmn)
+coef(MClm)
+MCcc <- catchCurve(n~Age,data=CMCounts,ages2use=3:4,weighted=TRUE)
+cbind(summary(MCcc),confint(MCcc))
+plot(MCcc, pos.est="bottomleft")
+```
+
+#### Rose Male
+
+```{r, echo=FALSE}
+MRlmn<- filter(RMCounts,Age>=3) %>% mutate(lnct=log(n))
+MRlm<- lm(lnct~Age, data = MRlmn)
+coef(MRlm)
+MRcc <- catchCurve(n~Age,data=RMCounts,ages2use=3:5,weighted=TRUE)
+cbind(summary(MRcc),confint(MRcc))
+plot(MRcc, pos.est="bottomleft")
+```
+
+#### Cobb Female
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=CFCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(FCcr <- chapmanRobson(n~Age,data=CFCounts,ages2use=2:3))
+plot(FCcr)
+FClmn<- filter(CFCounts,Age>=2) %>% mutate(lnct=log(n))
+FClm<- lm(lnct~Age, data = FClmn)
+coef(FClm)
+FCcc <- catchCurve(n~Age,data=CFCounts,ages2use=2:3,weighted=TRUE)
+cbind(summary(FCcc),confint(FCcc))
+plot(FCcc, pos.est="bottomleft")
+```
+
+#### Rose Female
+
+```{r, echo=FALSE}
+plot(log(n)~Age,data=RFCounts, xlab="Age (yrs)",ylab="Log Catch",pch=19)
+(FRcr <- chapmanRobson(n~Age,data=RFCounts,ages2use=2:5))
+plot(FRcr)
+FRlmn<- filter(RFCounts,Age>=1) %>% mutate(lnct=log(n))
+FRlm<- lm(lnct~Age, data = FRlmn)
+coef(FRlm)
+FRcc <- catchCurve(n~Age,data=RFCounts,ages2use=1:5,weighted=TRUE)
+cbind(summary(FRcc),confint(FRcc))
+plot(FRcc, pos.est="bottomleft")
+
+```
+
+## 3. Statistical comparisons
+
+### Site
+
+```{r, echo=FALSE}
+RGCounts_site_2<- filter(RGCounts_site, Age>=3)
+lmCCs<- lm(n~Age*Site, data=RGCounts_site_2)
+anova(lmCCs)
+
+(Site_Mortality_Table<- tbl_regression(lmCCs) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) )
+
+
+```
+
+### Sex
+
+```{r, echo=FALSE}
+RGCounts_sex_2<- filter(RGCounts_sex, Age>=3)
+lmCC_sex<- lm(n~Age*Sex, data=RGCounts_sex_2)
+anova(lmCC_sex)
+
+Sex_Mortality_Table<- tbl_regression(lmCC_sex) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") %>%
+  add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) 
+
+(Mortality_Table<- tbl_merge(
+    tbls = list(Site_Mortality_Table, Sex_Mortality_Table),
+    tab_spanner = c("**Mortality between Site**", "**Mortality between Sex**")
+  ) %>% as_gt())
+ 
+ Mortality_Table %>% gtsave(filename="Mortality_Table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+```
+
+### Interaction Sex + Site
+
+```{r, echo=FALSE}
+RGCounts_2<- filter(RGCounts, Age>=2)
+lmCC<- lm(n~Age*Sex+Site, data=RGCounts_2)
+(lmCCTable<- anova(lmCC))
+```
+
+```{r, echo=FALSE}
+(Mortality_lm<- tab_model(lmCC_sex, lmCCs, 
+          collapse.ci = TRUE, show.fstat = TRUE ,
+          p.style = "numeric_stars",  CSS = list(css.table = '+font-family: Arial;', file="Mortality_lm.doc")))
+
+```
+
+
+### Sexes Separated
+
+### Sites Separated
+
+## 4. Publishable plot and table creation
+
+### Sites
+
+```{r, echo=FALSE}
+xsc<- 3:4
+xsr<- 3:5
+ysc<- predict(lmCCs, data.frame(Age=xsc, Site="Cobb"))
+ysr<- predict(lmCCs, data.frame(Age=xsr, Site="Rose"))
+cobb_mort<- as.data.frame(cbind(xsc, ysc))
+rose_mort<- as.data.frame(cbind(xsr, ysr))                        
+
+
+(Site_plot<-ggplot(data=RGCounts_site, aes(x=Age, y=log(n))) + geom_point(aes(colour=Site)) + ylim(0,5) + stat_smooth( method = lm, se=FALSE, aes(colour=Site), data=RGCounts_site_2) + scale_colour_manual(values=c("black", "grey")) + labs(x= "Age", y="log(n)")+ theme_classic() + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+ggsave("Mortality_site.jpeg", device="jpeg", plot=Site_plot, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+
+```{r,echo=FALSE}
+Site_table<- rbind(Cobb_CR, Rose_CR)
+Site_table<-data.frame(lapply(Site_table, function(x) if(is.numeric(x)) round(x, 3) else x))
+
+
+
+(Site_table = gt(Site_table) %>% tab_header(title=md("**Mortality by Site**"))  %>% tab_options(table.width = pct(50)) %>%
+  tab_stubhead(label = md("**Metric**")) %>% cols_label(Estimate=md("**Estimate**"), Std..Error=md("**Standard Error**"), X95..LCI= md("**95% LCI**"), X95..UCI=md("**95% UCI**"), Group=md("**Site**")) %>%  cols_width(everything() ~ px(100)) %>%
+  tab_row_group(
+    group = md("**Cobb**"),
+    rows = 1:2
+  )  %>% tab_row_group(
+    group = md("**Rose**"),
+    rows = 3:4
+  ))
+
+Site_table %>% gtsave(filename="Site_Mortality_table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+
+```
+
+
+### Sexes
+
+
+```{r, echo=FALSE}
+xsm<- 3:5
+xsf<- 3:5
+ysm<- predict(lmCC_sex, data.frame(Age=xsm, Sex="M"))
+ysf<- predict(lmCC_sex, data.frame(Age=xsf, Sex="F"))
+male_mort<- as.data.frame(cbind(xsm, ysc))
+female_mort<- as.data.frame(cbind(xsf, ysf))                        
+
+
+(Sex_plot<-ggplot(data=RGCounts_sex, aes(x=Age, y=log(n))) + geom_point(aes(colour=Sex)) + ylim(0,5) + stat_smooth( method = lm, se=FALSE, aes(colour=Sex), data = RGCounts_sex_2) + scale_colour_manual(values=c("black", "grey")) + labs(x= "Age", y="log(n)")+ theme_classic() + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+ggsave("Mortality_sex.jpeg", device="jpeg", plot=Sex_plot, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+```{r, echo=FALSE}
+Sex_table<- rbind(Female_CR, Male_CR)
+Sex_table<-data.frame(lapply(Sex_table, function(x) if(is.numeric(x)) round(x, 3) else x))
+
+(Sex_table= gt(Sex_table) %>% tab_header(title=md("**Mortality by Sex**"))  %>% tab_options(table.width = pct(50)) %>%
+  tab_stubhead(label = md("**Metric**")) %>% cols_label(Estimate=md("**Estimate**"), Std..Error=md("**Standard Error**"), X95..LCI= md("**95% LCI**"), X95..UCI=md("**95% UCI**"), Group=md("**Sex**")) %>%  cols_width(everything() ~ px(100)) %>%
+  tab_row_group(
+    group = md("**Female**"),
+    rows = 1:2
+  )  %>% tab_row_group(
+    group = md("**Male**"),
+    rows = 3:4
+  ))
+
+Sex_table %>% gtsave(filename="Sex_Mortality_table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+
+
+
+```
+
+
+```{r, include=FALSE}
+(Mortality_plot<- ggarrange(Site_plot, Sex_plot + rremove ("ylab"), ncol = 2, nrow = 1, common.legend = FALSE, align = "h", labels = c("A", "B"), hjust = c(0, 1.5), vjust=c(0.5, 0.5), legend = "right"))
+
+ggsave("Mortality.jpeg", device="jpeg", plot=Mortality_plot, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+```{r, include=FALSE}
+library(png)
+
+Sex_image <- readPNG("Sex_Mortality_table.png")
+(Sex_image <- ggplot() + background_image(Sex_image) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm")))
+
+Site_image<- readPNG("Site_Mortality_table.png")
+(Site_image <- ggplot() + background_image(Site_image) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1,  unit = "cm")))
+
+(Mortality_table<- ggarrange(Site_image, Sex_image, ncol = 2, nrow = 1))
+```
+
+```{r, echo=FALSE}
+
+(Mortality1<- Mortality_plot / Mortality_table + plot_layout(heights=(c(2.5,1.5))))
+
+ggsave("Mortality1.jpeg", device="jpeg", plot=Mortality1, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+
+```
+
+
+```{r}
+tbl_merge(
+    tbls = list(MrVB_Table, McVB_Table, FrVB_Table),
+    tab_spanner = c("**Rose Male**", "**Cobb Male**", "**Rose Female**")
+  ) %>% as_gt()
+```
+
