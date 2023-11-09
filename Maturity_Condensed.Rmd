@@ -1,0 +1,251 @@
+---
+title: "Maturity"
+author: "Anna Conklyn"
+date: "2023-11-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readxl)
+library(gtExtras)
+library(FSA)
+library(car)
+library(plyr)
+library(tidyr)
+library(dplyr)
+library(magrittr)
+library(ggplot2)
+library(ggpubr)
+library(sjPlot)
+library(gt)
+library(cowplot)
+```
+
+
+# **Structure and Condition of an Established Round Goby Population in the Thousand Islands Region, St. Lawrence River**
+## *Maturity analysis*
+
+### Contents of Rmarkdown:
+  > 1.   Maturity at length
+      > a. Logistic regression model fitting
+      > b. Compute age-at-50% and 90% maturity
+      > c. Statistical comparisons
+  
+  > 2. Maturity at age
+      > a. Logistic regression model fitting
+      > b. Compute age-at-50% and 90% maturity
+      > c. Statistical comparisons
+      
+  > 3. Summary figures
+  
+```{r, include=FALSE, data setup}
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+AllRG <- read_excel("Pop_Strucutre_Dissected.xlsx") 
+
+AllRG %<>% mutate(LCat=lencat(Total.Length, w=10)) %<>% filter(!is.na(AllRG$Age)) 
+
+as.factor(AllRG$Month)
+table(AllRG$Month)
+
+spawning<-(c("July", "June", "May"))
+
+AllRG <- AllRG %>% filter(Month %in% spawning)
+
+AllRG %>% group_by(Site)
+AllRG$Maturity<- as.factor(AllRG$Maturity)
+AllRG$Maturity1<-ifelse(AllRG$Maturity=="Mature",1,0)
+
+RG.C<- AllRG %>% filter(Site == "Cobb")
+RG.R<- AllRG %>% filter(Site == "Rose")
+
+```
+
+
+# Maturity at length
+
+### Logistic model fitting
+```{r, maturity at length}
+glm_sites_length<- glm(Maturity~Total.Length*Site, data = AllRG, family=binomial)
+Length_Chi<- drop1(glm_sites_length,~.,test="Chisq")
+print(Length_Chi)
+
+Site_Length_Maturity_table<- tbl_regression(glm_sites_length) %>% add_glance_table(
+    include = c(nobs, logLik, AIC, BIC))  %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}")
+```
+
+### Compute length-at- 50% and 90% maturity for each site
+
+$$ x = \frac {log (\frac{p}{1-p}) - \alpha} {\beta_1} $$
+
+```{r, echo=FALSE}
+
+lrPerc <- function(cf,p) (log(p/(1-p))-cf[1])/cf[2]
+
+``` 
+
+#### Cobb
+```{r, echo=FALSE}
+glm_C <- glm(Maturity1~Total.Length,data=RG.C,family=binomial)
+coef(glm_C)
+
+(C_L50 <- lrPerc(coef(glm_C),0.5))
+C_L50$Site<-"Cobb"
+C_L50$Percentage<-"50%"
+
+(C_L90 <- lrPerc(coef(glm_C),0.9))
+C_L90$Site<-"Cobb"
+C_L90$Percentage<-"90%"
+
+
+```
+
+### Rose
+```{r, echo=FALSE}
+
+glm_R <- glm(Maturity1~Total.Length,data=RG.R,family=binomial)
+
+(R_L50 <- lrPerc(coef(glm_R),0.5))
+R_L50$Site<-"Rose"
+R_L50$Percentage<-"50%"
+
+(R_L90 <- lrPerc(coef(glm_R),0.9))
+R_L90$Site<-"Rose"
+R_L90$Percentage<-"90%"
+
+```
+
+```{r}
+(Maturity_LPred<- rbind(C_L50, C_L90, R_L50, R_L90))
+Maturity_LPred<- gtsummary::as_tibble(Maturity_LPred)
+Maturity_LPred$`(Intercept)` %<>% as.numeric(Maturity_LPred$`(Intercept)`) %<>% round(., digits = 2)
+
+```
+
+
+
+
+
+
+
+
+# Maturity at age
+
+### Logistic model fitting
+```{r, maturity at age}
+
+AllRG %<>% filter(!is.na(AllRG$Age))
+glm_sites_age<- glm(Maturity~Age*Site, data = AllRG, family=binomial)
+Age_Chi<- drop1(glm_sites_age,~.,test="Chisq")
+print(Age_Chi)
+
+(Site_Age_Maturity_table<- tbl_regression(glm_sites_age) %>% add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}"))
+```
+
+#### Cobb
+```{r, echo=FALSE}
+
+glm_C <- glm(Maturity1~Age,data=RG.C,family=binomial)
+coef(glm_C)
+
+(C_L50 <- lrPerc(coef(glm_C),0.5))
+C_L50$Site<-"Cobb"
+C_L50$Percentage<-"50%"
+(C_L90 <- lrPerc(coef(glm_C),0.9))
+C_L90$Site<-"Cobb"
+C_L90$Percentage<-"90%"
+
+```
+
+### Rose
+```{r, echo=FALSE}
+
+glm_R <- glm(Maturity1~Age,data=RG.R,family=binomial)
+coef(glm_C)
+
+(R_L50 <- lrPerc(coef(glm_R),0.5))
+R_L50$Site<-"Rose"
+R_L50$Percentage<-"50%"
+(R_L90 <- lrPerc(coef(glm_R),0.9))
+R_L90$Site<-"Rose"
+R_L90$Percentage<-"90%"
+
+```
+
+```{r}
+(Maturity_APred<- rbind(C_L50, C_L90, R_L50, R_L90))
+Maturity_APred<- gtsummary::as_tibble(Maturity_APred)
+Maturity_APred$`(Intercept)` %<>% as.numeric(Maturity_APred$`(Intercept)`) %<>% round(., digits = 2)
+
+Age_Maturity_Perc<- gt(Maturity_APred, groupname_col = "Site")
+```
+
+
+# Summary figures
+
+```{r, summary table}
+
+(Maturity_Table<- tbl_merge(
+    tbls = list(Site_Length_Maturity_table, Site_Age_Maturity_table),
+    tab_spanner = c("**Maturity-at-Length**", "**Maturity-at-Age**")
+  ) %>% as_gt())
+ 
+ Maturity_Table %>% gtsave(filename="Maturity_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+ 
+```
+
+```{r}
+(Maturity_length_plot<- ggplot(AllRG, aes(x=Total.Length, y=Maturity1, color=Site)) + geom_point(aes(color=Site)) + labs(title = "A") +
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + theme_classic () + scale_colour_manual(values=c("grey", "black")) + labs(x= "Total length (mm)", y="Probability of maturity")+ theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+
+(Maturity_age_plot<- ggplot(AllRG, aes(x=Age, y=Maturity1, color=Site)) + geom_point(aes(color=Site)) + labs(title = "B") + 
+  stat_smooth(method="glm", method.args=list(family="binomial"), se=FALSE) + theme_classic () + scale_colour_manual(values=c("grey", "black")) + labs(x= "Age", y="Probability of maturity")+ theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+
+(Maturity<- ggarrange(Maturity_length_plot + rremove("ylab"), Maturity_age_plot + rremove("ylab"), ncol = 1, nrow = 2, common.legend = TRUE,  hjust = c(-2,-.5), vjust=c(1.2,1.2), legend = "bottom"))
+(Maturity<- annotate_figure(Maturity,left=text_grob("Probability of Maturity", rot = 90, size = 15)))
+ggsave("Maturity_plot.jpeg", device="jpeg", plot=Maturity, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+
+```
+
+```{r}
+library(gtExtras) 
+
+(Maturity_LPerc<-gt(Maturity_LPred, groupname_col = "Site", rowname_col = "Percentage") %>% tab_header(title = "Length at maturity")  %>%
+  cols_label(  "(Intercept)" = md("**Estimate**"))%>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_group()) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_title() 
+    ))
+Maturity_LPerc %>% gtsave(filename="Maturity_Length_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+
+
+(Maturity_APerc<-gt(Maturity_APred, groupname_col = "Site", rowname_col = "Percentage") %>% tab_header(title = "Age at maturity") %>%
+  cols_label(  "(Intercept)" = md("**Estimate**")) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_group()) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_title()
+  ))
+Maturity_APerc %>% gtsave(filename="Maturity_Age_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+
+(Maturity_LPerc_image <- ggdraw() + draw_image("Maturity_Length_Table.png"))
+(Maturity_APerc_image <- ggdraw() + draw_image("Maturity_Age_Table.png"))
+
+(Maturity_predictions<- ggarrange(Maturity_LPerc_image, Maturity_APerc_image, ncol = 2))
+
+ggsave("Maturity_predictions.jpeg", device="jpeg", plot=Maturity_predictions, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+```
+

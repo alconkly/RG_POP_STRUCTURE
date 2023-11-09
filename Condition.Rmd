@@ -100,7 +100,7 @@ kruskal.test(HSI ~ Month, data = RG.M)
 (M_HSI_Summary<-(summarySE(RG.M, measurevar="HSI", groupvars=c("Site", "Month"))))
 M_HSI_Summary<- M_HSI_Summary %>% filter(Month != "June") %>% filter(Month != "September")
 
-(HSI_M_line<- ggplot(M_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site))  + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Male") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + ylim(0, 6) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+(HSI_M_line<- ggplot(M_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site))  + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Male") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + ylim(0, 6) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
 
 
 ```
@@ -128,7 +128,7 @@ kruskal.test(HSI ~ Month, data = RG.F)
 ```{r, echo=FALSE}
 (F_HSI_Summary<-(summarySE(RG.F, measurevar="HSI", groupvars=c("Site", "Month"))))
 
-(HSI_F_line<- ggplot(F_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site)) + ylim(0, 6) + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Female") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+(HSI_F_line<- ggplot(F_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site)) + ylim(0, 6) + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Female") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
 
 ```
 
@@ -178,7 +178,7 @@ kruskal.test(GSI ~ Month, data = RG.M)
 ```{r, echo=FALSE}
 (M_GSI_Summary<-(summarySE(RG.M, measurevar="GSI", groupvars=c("Site", "Month"), na.rm = TRUE)))
 
-(GSI_M_line<- ggplot(M_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1)+ labs(title = "Male") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
+(GSI_M_line<- ggplot(M_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1)+ labs(title = "Male") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black"))  +geom_hline(yintercept=1, linetype="dashed", size=1) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
 
 ggsave("GSI_Lineplot_male.jpeg", device="jpeg", plot=GSI_M_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
 
@@ -186,7 +186,7 @@ ggsave("GSI_Lineplot_male.jpeg", device="jpeg", plot=GSI_M_line, path="G:/POP_ST
 
 
 ```{r, echo=FALSE}
-M_GSI<- ggplot(RG.M, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Male", fill = "Site") + ylim(0, 20) + scale_fill_manual(values=c("black", "grey"                                                                                                                                                                                                )) +geom_hline(yintercept=1, linetype="dashed", size=1) + theme (axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text(size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ()
+M_GSI<- ggplot(RG.M, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Male", fill = "Site") + ylim(0, 20) + scale_fill_manual(values=c( "grey" ,"black" )) +geom_hline(yintercept=1, linetype="dashed", size=1) + theme (axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text(size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ()
 M_GSI
 ```
 
@@ -207,7 +207,7 @@ kruskal.test(GSI ~ Month, data = RG.F)
 ```{r, echo=FALSE}
 (F_GSI_Summary<-(summarySE(RG.F, measurevar="GSI", groupvars=c("Site", "Month"), na.rm = TRUE)))
 
-(GSI_F_line<- ggplot(F_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1) + labs(title = "Female") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
+(GSI_F_line<- ggplot(F_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1) + labs(title = "Female") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + geom_hline(yintercept=5, linetype="dashed", size=1)  + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
 
 ggsave("GSI_Lineplot_female.jpeg", device="jpeg", plot=GSI_F_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
 
@@ -251,7 +251,7 @@ kruskal.test(K ~ Month, data = RG.M)
 ```{r, echo=FALSE}
 (M_K_Summary<-summarySE(RG.M, measurevar="K", groupvars=c("Site", "Month"), na.rm = TRUE))
 
-(K_M_line<- ggplot(M_K_Summary, aes(y=K*100000, x=Month, colour=Site)) + ylim(1, 2) + geom_errorbar(aes(ymin=(K-se)*100000, ymax=(K+se)*100000), width=.1) + geom_point() + labs(title = "Male") + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + labs(y=bquote("Fulton's Condition \n (Total Weight / Total" *Length^3~")*" * 10^5~")")))
+(K_M_line<- ggplot(M_K_Summary, aes(y=K*100000, x=Month, colour=Site)) + ylim(1, 2) + geom_errorbar(aes(ymin=(K-se)*100000, ymax=(K+se)*100000), width=.1) + geom_point() + labs(title = "Male") + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("grey", "black")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + labs(y=bquote("Fulton's Condition \n (Total Weight / Total" *Length^3~")*" * 10^5~")")))
 
 ggsave("K_Lineplot_male.jpeg", device="jpeg", plot=K_M_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
 ```
@@ -283,7 +283,7 @@ kruskal.test(K ~ Month, data = RG.F)
 ```{r, echo=FALSE}
 (F_K_Summary<-(summarySE(RG.F, measurevar="K", groupvars=c("Site", "Month"), na.rm = TRUE)))
 
-(K_F_line<- ggplot(F_K_Summary, aes(y=K*100000, x=Month, colour=Site)) + ylim(1, 2) + geom_errorbar(aes(ymin=(K-se)*100000, ymax=(K+se)*100000), width=.1) + geom_point() + labs(title = "Female") + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("black", "grey")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + labs(y=bquote("Fulton's Condition \n (Total Weight / Total" *Length^3~")*" * 10^5~")")))
+(K_F_line<- ggplot(F_K_Summary, aes(y=K*100000, x=Month, colour=Site)) + ylim(1, 2) + geom_errorbar(aes(ymin=(K-se)*100000, ymax=(K+se)*100000), width=.1) + geom_point() + labs(title = "Female") + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c("grey", "black")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + labs(y=bquote("Fulton's Condition \n (Total Weight / Total" *Length^3~")*" * 10^5~")")))
 
 ggsave("K_Lineplot_female.jpeg", device="jpeg", plot=K_F_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
 

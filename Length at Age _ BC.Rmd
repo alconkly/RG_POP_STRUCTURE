@@ -36,6 +36,7 @@ library(stringr)
 library(lattice)
 library(car)
 library(multcomp)
+library(readxl)
 ```
 
 
@@ -86,8 +87,6 @@ a_M<- coef(BodyOR_M)[2]
 BodyOR_F<- lm(log(Total.Length) ~ log(OR), data=Female) 
 (BodyOR_F_Summary<- coef(BodyOR_F))
 a_F<- coef(BodyOR_M)[2]
-
-
 ```
 
 ### 3. Back-calculate total lengths at age
@@ -178,10 +177,12 @@ ggsave("BCplot.jpeg", device="jpeg", plot=BCplot, path="G:/Dissertation/Chapter 
 
 
 ```{r, echo=FALSE}
-RG_long_F$AgeRad <- as.factor(RG_long_F$AgeRad) 
 
 ###Check ANCOVA assumptions
+
 summary(aov(AgeRad~Site, data=RG_long_F)) ## covariate and treatment are independent
+
+RG_long_F$AgeRad <- as.factor(RG_long_F$AgeRad) 
 leveneTest(Pred_len ~ AgeRad, data = RG_long_F) ##test for homogeneity of variance among sites
 
  
@@ -195,12 +196,28 @@ FemaleBC_table$rownames<- rownames(FemaleBC_table)
 
 FemaleBC_table_print %>% gtsave(filename="Female BC_ANCOVA.png", path="G:/POP_STRUCTURE_PUB/Figures")
  
+
+MaleBC_table$Sex<-"Male"
+FemaleBC_table$Sex<-"Female"
+
+FullBC_ANCOVA_table<- rbind(MaleBC_table, FemaleBC_table)
+
+FullBC_ANCOVA<- gt(FullBC_ANCOVA_table, rowname_col = "rownames", groupname_col = "Sex") %>% fmt_number(columns = c("Sum Sq" , "F value", "Pr(>F)"),  decimals = 2) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_group()) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_column_labels()
+  )
+  
+FullBC_ANCOVA %>% gtsave(filename = "BCANCOVA table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+
 ```
 
 
 
 ```{r}
-class(Male_BC_table)
 
 FullBC<- rbind(M_BC_Sum, F_BC_Sum)
 
@@ -219,36 +236,6 @@ FullBC<- rbind(M_BC_Sum, F_BC_Sum)
  
 FullBC_Table %>% gtsave(filename="BC_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
 ```
-
-
-
-
-### 5. Von Bertalanffy growth curves to back calculated lengths
-
-$$ L(t) = L_{\infty} (1-e^{-K(t-t_{0})})   $$
-
-
-```{r}
-vbmodel<- Length ~ Linf*(1-exp(-K*(AgeRad-t0)))
-```
-
-
-#### Male starting values
-
-```{r}
-RG_long_M %<>% drop_na(Pred_len)
-
-(MVB <- vbStarts(Pred_len~AgeRad,data=RG_long_M))
-(mTyp<- list(Linf=max(RG_long_M$Length, na.rm=TRUE), K=0.367, t0=-0.504))
-
-           
-fitMVB <-nls(vbmodel, data = RG_long_M, start = mTyp, control = list(maxiter = 10000))
-
-
-```
-
-
-
 
 
 

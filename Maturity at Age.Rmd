@@ -32,10 +32,12 @@ library(magrittr)
 
 
 ```{r, include=FALSE}
-setwd("G:/POP_STRUCTURE_PUB/Data/Maturity")
-AllRG<- read_excel("Maturity.xlsx", col_names = TRUE)
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+AllRG <- read_excel("Pop_Strucutre_Dissected.xlsx") 
 
-AllRG<- na.omit(AllRG)
+AllRG %<>% mutate(LCat=lencat(Total.Length, w=10)) %<>% filter(!is.na(AllRG$Age))
+AllRG$Age<- as.numeric(AllRG$Age)
+
 AllRG %>% group_by(Site)
 AllRG$Age<- as.numeric(AllRG$Age)
 AllRG$Maturity<- as.factor(AllRG$Maturity)
@@ -332,9 +334,9 @@ glm_sites<- glm(Maturity~Age*Site, data = AllRG, family=binomial)
 drop1(glm_sites,~.,test="Chisq")
 cf_Sites<- coef(glm_sites)
 
-Site_Age_Matuirty_table<- tbl_regression(glm_sites) %>% add_glance_table(
-    include = c(nobs, logLik, AIC, BIC)) %>%  as_gt()
-Site_Age_Matuirty_table %>% gtsave(filename="Site_Age_Matuirty_table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+(Site_Age_Maturity_table<- tbl_regression(glm_sites) %>% add_glance_table(
+    include = c(nobs, logLik, AIC, BIC)) %>%  as_gt())
+Site_Age_Maturity_table %>% gtsave(filename="Site_Age_Matuirty_table.png", path="G:/POP_STRUCTURE_PUB/Figures")
 ```
 
 ```{r}
