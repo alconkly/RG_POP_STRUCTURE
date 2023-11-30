@@ -71,8 +71,9 @@ glm_sites_length<- glm(Maturity~Total.Length*Site, data = AllRG, family=binomial
 Length_Chi<- drop1(glm_sites_length,~.,test="Chisq")
 print(Length_Chi)
 
-Site_Length_Maturity_table<- tbl_regression(glm_sites_length) %>% add_glance_table(
-    include = c(nobs, logLik, AIC, BIC))  %>%  
+Site_Length_Maturity_table<- tbl_regression(glm_sites_length) %>%
+  add_glance_table(
+    include = c(nobs))  %>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}")
 ```
@@ -143,7 +144,7 @@ Age_Chi<- drop1(glm_sites_age,~.,test="Chisq")
 print(Age_Chi)
 
 (Site_Age_Maturity_table<- tbl_regression(glm_sites_age) %>% add_glance_table(
-    include = c(nobs, logLik, AIC, BIC)) %>%  
+    include = c(nobs)) %>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}"))
 ```

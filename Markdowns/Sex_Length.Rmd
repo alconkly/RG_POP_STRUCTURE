@@ -32,6 +32,10 @@ library(lubridate)
 library(Matching)
 library(ggpubr)
 library(car)
+library(tidyr)
+library(gt)
+library(gtExtras)
+library(gtsummary)
 
 knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 
@@ -54,12 +58,8 @@ RG_NotDissected<- RG_NotDissected %>% dplyr:: select("Date", "Total.Mass", "Tota
 
 AllRG<- rbind(RG_Dissected, RG_NotDissected)
 
-
-AllRG %<>% na.omit(AllRG)
-AllRG$Date <- as_date(AllRG$Date, format="%m-%d-%Y")
 as.factor(AllRG$Month)
 AllRG$Month<- factor(AllRG$Month, levels = c("May", "June", "July", "August", "September", "October"))
-AllRG %>% arrange(Date)
 
 AllRG %<>% group_by(Month, Year, Site, Sex)
 AllRG %<>% mutate(lcat5=lencat(Total.Length, w=5), lcat10=lencat(Total.Length, w=10), logLength=log(Total.Length))
@@ -238,11 +238,13 @@ chisq.test(RG_F_Month_xtab)
 
 ## 3. Sex ratio calculation, visualization and statistical analysis
 
-
+### Between months
 ```{r, echo=FALSE}
 library(ratios)
 options(digits = 3)
+
 MF<- AllRG %>% filter(Sex != "I")
+
 Sex_ratio<- xtabs(~  Month + Sex, data=MF)
 Sex_ratio<- as.data.frame.matrix(Sex_ratio)
 
@@ -257,7 +259,80 @@ colnames(Sex_ratio) <- c("Female", "Male", "Ratio")
 
 Month<- rownames(Sex_ratio)
 rownames(Sex_ratio)<- NULL
-Sex_ratio<- cbind(Month, Sex_ratio)
+(Sex_ratio<- cbind(Month, Sex_ratio) %>% as_data_frame())
+
+```
+
+
+### Rose
+
+```{r, echo=FALSE}
+
+Rose_MF<- MF %>% filter(Site == "Rose")
+
+Rose_MF_Sex_ratio<- xtabs(~  Month + Sex, data=Rose_MF)
+Rose_MF_Sex_ratio<- as.data.frame.matrix(Rose_MF_Sex_ratio)
+
+Rose_MF_Sex_ratio$ratio<- case_when(
+    is.na(Rose_MF_Sex_ratio$M) & is.na(Rose_MF_Sex_ratio$F) ~ 1,
+    is.na(Rose_MF_Sex_ratio$M) & Rose_MF_Sex_ratio$F >= 0 ~ 1,
+    Rose_MF_Sex_ratio$M >= 0 & is.na(Rose_MF_Sex_ratio$F) ~ 0,
+    TRUE ~ Rose_MF_Sex_ratio$M / Rose_MF_Sex_ratio$F) 
+colnames(Rose_MF_Sex_ratio) <- c("Female.Rose", "Male.Rose", "Ratio.Rose")
+
+Month<- rownames(Rose_MF_Sex_ratio)
+rownames(Rose_MF_Sex_ratio)<- NULL
+(Rose_MF_Sex_ratio<- cbind(Month, Rose_MF_Sex_ratio) %>% as_data_frame())
+
+```
+
+### Cobb
+
+```{r, echo=FALSE}
+
+Cobb_MF<- MF %>% filter(Site == "Cobb")
+Cobb_MF_Sex_ratio<- xtabs(~  Month + Sex, data=Cobb_MF)
+Cobb_MF_Sex_ratio<- as.data.frame.matrix(Cobb_MF_Sex_ratio)
+
+Cobb_MF_Sex_ratio$ratio<- case_when(
+    is.na(Cobb_MF_Sex_ratio$M) & is.na(Cobb_MF_Sex_ratio$F) ~ 1,
+    is.na(Cobb_MF_Sex_ratio$M) & Cobb_MF_Sex_ratio$F >= 0 ~ 1,
+    Cobb_MF_Sex_ratio$M >= 0 & is.na(Cobb_MF_Sex_ratio$F) ~ 0,
+    TRUE ~ Cobb_MF_Sex_ratio$M / Cobb_MF_Sex_ratio$F) 
+colnames(Cobb_MF_Sex_ratio) <- c("Female.Cobb", "Male.Cobb", "Ratio.Cobb")
+
+Month<- rownames(Cobb_MF_Sex_ratio)
+rownames(Cobb_MF_Sex_ratio)<- NULL
+(Cobb_MF_Sex_ratio<- cbind(Month, Cobb_MF_Sex_ratio) %>% as_data_frame())
+```
+
+```{r}
+(All_Sex_ratio<- cbind(Sex_ratio, Rose_MF_Sex_ratio, Cobb_MF_Sex_ratio))
+All_Sex_ratio <- All_Sex_ratio[, !duplicated(colnames(All_Sex_ratio))]
+
+```
+
+```{r}
+gt(All_Sex_ratio)
+```
+
+
+
+### Chi Square test 
+  to detect differences in sex ratio between months
+```{r, echo=FALSE}
+library(RVAideMemoire)
+
+chisq.test(Sex_ratio$Ratio)
+
+(Sex_Chi<- chisq.theo.multcomp(Sex_ratio$Ratio, p.method = "bonferroni"))
+
+(Sex_Chi<- extract(Sex_Chi))
+
+(Sex_ratio<- cbind(Month, Sex_ratio, Sex_Chi))
+
+Sex_ratio<- select(Sex_ratio, c("Month", "Female", "Male", "Ratio", "p.value.Chi", "p.value.Pr(>Chi)"))
+
 ```
 
 ### Summary table of sex ratio across sampling months
@@ -268,18 +343,14 @@ Sex_ratio<- cbind(Month, Sex_ratio)
     Month="Month",
     Male ="Male",
     Female="Female", 
-    Ratio ="M:F Ratio" ) %>% tab_options(column_labels.font.weight = "bold", row_group.font.weight = "bold") %>% gtsave(filename="Sex_ratio_table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures"))
+    Ratio ="M:F Ratio",
+    "p.value.Chi"= md("**X<sup>2</sup>**"),
+     "p.value.Pr(>Chi)" = md("**P-value**")) %>% tab_options(column_labels.font.weight = "bold", row_group.font.weight = "bold") )
+ 
+Sex_ratio_table %>% gtsave(filename="Sex_ratio_table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
 
 
 
 ```
-
-### Chi Square test 
-  to detect differences in sex ratio between months
-```{r, echo=FALSE}
-chisq.test(Sex_ratio$Ratio)
-```
-
-
 
 

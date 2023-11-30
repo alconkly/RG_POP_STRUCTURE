@@ -234,7 +234,33 @@ ggsave("GSI_LINE.jpeg", device="jpeg", plot=GSI_LINE, path="G:/Dissertation/Chap
 
 
 
-### 2. Monthly condition index analysis: GSI
+### 2. Monthly condition index analysis: K
+
+# Add not-dissected 
+```{r}
+RG_Dissected <- read_excel("Pop_Strucutre_Dissected.xlsx")
+RG_Dissected<- RG_Dissected %>% dplyr:: select("Date", "Total.Mass", "Total.Length", "Sex", "Site", "Month", "Year")
+
+
+RG_NotDissected <- read_excel("Pop_Strucutre_NotDissected.xlsx")
+RG_NotDissected<- RG_NotDissected %>% dplyr:: select("Date", "Total.Mass", "Total.Length", "Sex", "Site", "Month", "Year")
+
+
+AllRG<- rbind(RG_Dissected, RG_NotDissected)
+
+as.factor(AllRG$Month)
+
+AllRG$Month <- factor(AllRG$Month , levels=c("May", "June", "July", "August", "September", "October"))
+AllRG<- AllRG %>% filter(Month != "June") %>% filter(Month != "September")
+AllRG<- AllRG %>% filter(Total.Mass != "NA")
+
+
+AllRG %<>% mutate(K=(Total.Mass/Total.Length^3)) %<>% mutate (Sex=factor(Sex), Site=factor(Site))
+
+
+RG.M<-AllRG %>% filter(Sex=="M")
+RG.F<-AllRG %>% filter(Sex=="F")
+```
 
 ### Male K
 
@@ -259,7 +285,7 @@ ggsave("K_Lineplot_male.jpeg", device="jpeg", plot=K_M_line, path="G:/POP_STRUCT
 
 ```{r, echo=FALSE}
 
-M_K<- ggplot(RG.M, aes(x=Month, y=K*100000, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x =NULL, title = "Male") + ylim(0, 2.5) + scale_fill_manual(values=c( "black", "grey")) + labs(fill = "Site") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) + theme_classic()+ ggtitle("a)")
+(M_K<- ggplot(RG.M, aes(x=Month, y=K*100000, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x =NULL, title = "Male") + ylim(0, 2.5) + scale_fill_manual(values=c( "black", "grey")) + labs(fill = "Site") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) + theme_classic()+ ggtitle("a)"))
 
 ```
 
@@ -267,6 +293,7 @@ M_K<- ggplot(RG.M, aes(x=Month, y=K*100000, fill=Site)) + geom_boxplot(position=
 
 
 ### Female K
+
 
 #### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
 

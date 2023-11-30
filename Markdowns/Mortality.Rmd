@@ -96,6 +96,26 @@ Estimates Annual Survival Rate using:
 
 $$\widehat{S}= \frac{T}{n+T-1}=\frac{\overline{T}}{1+\overline{T}-\frac{1}{n}}$$
 
+### All gobies combined
+```{r, echo=FALSE}
+RG_cr <- chapmanRobson(n~Age,data=RGCounts,ages2use=3:5)
+Measure<- c("S", "Z")
+AllRG_CR<-cbind(summary(RG_cr, digits=2), confint(RG_cr, digits=2))
+(AllRG_CR<- data.frame(Measure, AllRG_CR))
+
+
+RG_CC<- catchCurve(n~Age, data=RGCounts, ages2use =3:5, weighted = TRUE)
+plot(RG_CC, pos.est = "bottomleft")
+Measure<- c("Z", "A")
+(RG_CC<- cbind(summary(RG_CC, digits=2), confint(RG_CC, digits=2)))
+(AllRG_CC<- data.frame(Measure, RG_CC))
+AllRG_CC<- AllRG_CC[2,]
+AllRG_CC<- AllRG_CC[-c(4,5)]
+
+(AllRG_Mortality_table<- rbind(AllRG_CR, AllRG_CC))
+
+```
+
 ### Sexes combined
 
 #### Cobb
@@ -166,16 +186,16 @@ plot(FCC, pos.est = "bottomleft")
 RGCounts_site_2<- filter(RGCounts_site, Age>=3)
 RGCounts_site_2$lnct<- log(RGCounts_site_2$n)
 
-lmCC_site<- lm(lnct~Age*Site, data=RGCounts_site_2)
+lmCC_site<- lm(Age~lnct*Site, data=RGCounts_site_2)
 summary(lmCC_site)
-Anova(lmCC_site)
+anova(lmCC_site)
 
 coef<- coef(lmCCs_site)
 (zhat_Cobb <- (-1*coef[["Age"]]))
 (zhat_Rose <- (-1*coef[["Age"]]+coef[["Age:SiteRose"]]))
 
 
-(Site_Mortality_Table<- tbl_regression(lmCCs_site) %>%  
+(Site_Mortality_Table<- tbl_regression(lmCC_site) %>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}") %>%
   add_glance_table(
@@ -189,9 +209,9 @@ coef<- coef(lmCCs_site)
 RGCounts_sex_2<- filter(RGCounts_sex, Age>=3)
 RGCounts_sex_2$lnct<- log(RGCounts_sex_2$n)
 
-lmCC_sex<- lm(lnct~Age*Sex, data=RGCounts_sex_2)
+lmCC_sex<- lm(Age~lnct*Sex, data=RGCounts_sex_2)
 summary(lmCC_sex)
-Anova(lmCC_sex)
+anova(lmCC_sex)
 
 coef<- coef(lmCC_sex)
 (zhat_Female <- -1*coef[["Age"]])
@@ -236,9 +256,9 @@ RGCounts$lnct<- log(RGCounts$n)
 RGCounts_3<- filter(RGCounts, Age>=3)
 
 
-(Mortality_plot<-ggplot(data=RGCounts, aes(x=Age, y=log(n))) + geom_point() + ylim(0,7) + labs(x= "Age", y="log(Catch [n])") + stat_smooth(method = lm, se=FALSE, data = RGCounts_3, colour="black") + theme_classic() + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15)))
+(ALL_Mortality_plot<-ggplot(data=RGCounts, aes(x=Age, y=log(n))) + geom_point() + ylim(0,7) + labs(x= "Age", y="log(Catch [n])") + stat_smooth(method = lm, se=FALSE, data = RGCounts_3, colour="black") + theme_classic() + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15)))
 
-
+ggsave("Mortality_all.jpeg", device="jpeg", plot=ALL_Mortality_plot, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 5)
 ```
 
 
@@ -265,6 +285,22 @@ ggsave("Mortality_Plot.jpeg", device="jpeg", plot=Mortality_plot, path="G:/Disse
 
 ### Chapman Robson metrics tables
 
+## All RG table
+```{r,echo=FALSE}
+
+
+(Mortality_table_all = gt(AllRG_Mortality_table, rowname_col = "Measure") %>% tab_stubhead(label = md("**Metric**")) %>%
+  cols_merge(columns = c(X95..LCI, X95..UCI), pattern = "({1},{2})" ) %>% tab_options(table.width = pct(60)) %>%
+    cols_label(Estimate=md("**Estimate**"), Std..Error=md("**Standard Error**"), X95..LCI= md("**95% CI**")) %>%  cols_width(everything() ~ px(100)) %>%
+ cols_align(align="left", columns = everything()) )
+  
+
+
+Mortality_table_all %>% gtsave(filename="Mortality_table_all.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+
+```
+
+#Sites separated table
 
 ```{r,echo=FALSE}
 Site_table<- rbind(Cobb_CR, Rose_CR)

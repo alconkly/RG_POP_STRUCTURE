@@ -1,0 +1,45 @@
+---
+title: "Temperature"
+author: "Anna Conklyn"
+date: "2023-11-30"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(gt)
+library(readxl)
+library(gtExtras)
+library(webshot2)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(magrittr)
+```
+
+```{r, include=FALSE}
+##Load data
+
+getwd()
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+Temperature<-read_xlsx("Temperature_19.xlsx") 
+```
+
+
+Turn to datetime and calculate mean daily temp
+```{r}
+Temperature$DateTime<-ymd_hms(Temperature$DateTime)
+Temperature %<>%
+  mutate(date = floor_date(DateTime, unit="day")) %<>% group_by(Site, date)
+
+Temp_summary<- Temperature %>% summarise(mean.temp=mean(Temperature))
+```
+
+```{r}
+TemperaturePlot<- ggplot(Temp_summary, aes(x=date, y=mean.temp)) + geom_line(aes(color=Site))  + theme_classic () + labs(x= "Date", y="Temperature (oC)") + scale_color_manual(values = c("Rose"= "black","Cobb"="darkgrey")) + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")
+
+ggsave("TemperaturePlot.jpeg", device="jpeg", plot=TemperaturePlot, , path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 5)
+
+```
+

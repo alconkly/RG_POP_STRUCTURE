@@ -183,13 +183,13 @@ F_BodyOR<- lm(logTL ~ logOR * Site, data=Female)
 
 (MOR_Table<- tbl_regression(M_BodyOR) %>%
   add_glance_table(
-    include = c(nobs, logLik, AIC, BIC)) %>%  
+    include = c(nobs, r.squared)) %>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}"))
 
 FOR_Table<- tbl_regression(F_BodyOR) %>%
   add_glance_table(
-    include = c(nobs, logLik, AIC, BIC))%>%  
+    include = c(nobs, r.squared))%>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}") 
 
@@ -212,13 +212,13 @@ CobbORSummary<- summary(Cobb_BodyOR)
 
 (RoseOR_Table<- tbl_regression(Rose_BodyOR) %>%
   add_glance_table(
-    include = c(nobs, logLik, AIC, BIC)) %>%  
+    include = c(nobs, r.squared)) %>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}"))
 
 CobbOR_Table<- tbl_regression(Cobb_BodyOR) %>%
   add_glance_table(
-    include = c(nobs, logLik, AIC, BIC))%>%  
+    include = c(nobs, r.squared))%>%  
   add_significance_stars(hide_p = FALSE,
                            pattern = "{p.value}{stars}") 
 

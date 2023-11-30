@@ -36,6 +36,7 @@ library(webshot)
 library(readxl)
 library(lmtest)
 library(FSAmisc)
+library(nlstools)
 ```
 
 
@@ -161,32 +162,105 @@ vbO <- Total.Length~Linf*(1-exp(-K*(Age-t0)))
 
 ### Male Von Bertalanffy
 
-### Male growth site comparison
+### Male growth site comparison and model selection
 
 ```{r, echo=FALSE}
 Male$Site<- as.factor(Male$Site)
 
 (MVB <- vbStarts(Total.Length~Age,data=Male))
-(MaleLKt<- Map(rep, MVB, c(2,2,2)))
+(MLKt<- Map(rep, MVB, c(2,2,2)))
 
-MfitLKt <- nls(vbLKt,data=Male,start=MaleLKt)
+MfitLKt <- nls(vbLKt,data=Male,start=MLKt)
 summary(MfitLKt)
 
-Mfit0 <- nls(vbO,data=Male,start=MaleLKt)
+Mfit0 <- nls(vbO,data=Male,start=MVB)
 summary(Mfit0)
 
 loglik0<- logLik(Mfit0)
 loglikF<- logLik(MfitLKt)
 
-lrt<- lrtest(Mfit0, MfitLKt) ## Conlcusion- there is a significant differences parameters between sites
-Mtest_table<- cbind(loglik0, loglikF, lrt)
-Mtest_table<- Mtest_table[2,c(1,2,5,6,7)] %>% round(3)
+(MLRT<-lrt(Mfit0,com=MfitLKt,com.name="All pars diff",
+sim.names=c("no pars diff")))
+
+## Conlcusion- there is a significant differences parameters between sites
+
+(Mtest_table<- cbind(loglik0, loglikF, MLRT))
+Mtest_table<- Mtest_table[, c(1,2,7,9,10)] %>% round(3)
 Mtest_table$Sex<- "Male"
-  
+```
+
+```{r}
+MsvL <- Map(rep,MVB,c(2,1,1))
+MsvK<- Map(rep, MVB, c(1, 2, 1))
+Msvt <- Map(rep,MVB,c(1,1,2))
+msvLK<-Map(rep, MVB, c(2,2,1))
+msvLt<- Map(rep, MVB, c(2,1,2))
+msvKt<- Map(rep, MVB, c(1,2,2))
+
+MfitL <- nls(vbL,data=Male,start=MsvL)
+MfitK<- nls(vbK, data=Male, start=MsvK)
+Mfitt <- nls(vbt,data=Male,start=Msvt)
+MfitLK<-nls(vbLK,data=Male,start=msvLK)
+MfitLt<-nls(vbLt,data=Male,start=msvLt)
+MfitKt<-nls(vbKt,data=Male,start=msvKt)
+
+(MaleVB_model<- tab_model(Mfit0, MfitL, MfitK, Mfitt, MfitLK, MfitLt, MfitKt, MfitLKt, 
+          collapse.ci = TRUE, show.fstat = TRUE , show.aic = TRUE, show.loglik = TRUE,
+          p.style = "numeric_stars",  CSS = list(css.table = '+font-family: Arial;', file="VB_Male.doc"), auto.label = TRUE))
 ```
 
 
-### Fitting male Von Bertalanffy models for Rose and Cobb, and summarizing model fit
+```{r}
+
+(MLRT<-lrt(Mfit0,com=MfitLKt,com.name="All pars diff",
+sim.names=c("no pars diff")))
+
+(MLRT1<-lrt(MfitLK, MfitLt, MfitKt, com=MfitLKt,com.name="all pars diff",
+sim.names=c("Linf,K diff","Linf,t0 diff","K,t0 diff")))  # All nested models statistically similar to LKt, use LK model for next round of selection because it has the best logLikO value
+
+(MLRT2<-lrt(MfitL, MfitK, com=MfitLK,com.name="L, K diff",
+sim.names=c("Linf", "K diff")))         # Both reduced models similar (K approaching significance), use L for final LRT against null model
+
+(MLRT3<-lrt(Mfit0, com=MfitL, com.name="L diff",
+sim.names=c("no pars diff")))         # Linf significant site effect
+
+(M_VB_selction<- data.frame(rbind(MLRT, MLRT1, MLRT2, MLRT3)))
+M_VB_selction<- M_VB_selction[, c(2, 4, 5,7, 8)] %>% round(3)
+
+rownames<- c("[LKt] v 0", "[LKt] v LK", "[LKt] v Lt" , "[LKt] v Kt", "[LK] v L", "[LK] v K", "[L] v 0")
+
+selection<- c("Fully nested [LKt]", "1st round [LKt]", "1st round [LKt]", "1st round [LKt]", "2nd round [LK]", "2nd round [LK]", "3rd round [L]")
+
+M_VB_selction<-cbind(M_VB_selction, rownames, selection)
+
+```
+### Male selection table creation
+
+```{r}
+(M_VB_Selection_table<- M_VB_selction %>% gt(rowname_col = "rownames", groupname_col = "selection")  %>%  cols_label(
+    logLikO = md("**Ln(L<sub>R</sub>)**"),
+    logLikA = md("**Ln(L<sub>F</sub>)**"),
+         Chisq = md("**X<sup>2</sup>**"),
+     "Pr..Chisq." = md("**P-value**"),
+      Df= md("**df**")) %>% tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_row_groups(groups = everything())
+  ) %>%
+  tab_style(
+    style = cell_text( align = "right"),
+    locations = cells_body())%>%
+  tab_style(
+    style = cell_text( align = "right"),
+    locations = cells_stub()) %>%
+  cols_width(Df~px(50), Chisq~px(50), everything()~px(100)) %>% tab_footnote(
+    footnote = md("L<sub>F</sub> denotes maximum likelihood ratio for the full model denoted in brackets. L<sub>R</sub> denotes maximum likelihood ratio for reduced model denoted in the rowname.")))
+
+M_VB_Selection_table %>% gtsave(filename="M_VB_Selection_table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+```
+
+
+
+### Fitting separate male Von Bertalanffy models for Rose and Cobb, and summarizing model fit
 
 ```{r, Rose fit}
 ##Rose
@@ -196,7 +270,7 @@ rgMr$Total.Length<- as.numeric(rgMr$Total.Length)
 
 fitMr<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=rgMr, start=MVB)
 bMr <- nlsBoot(fitMr)
-cbind(coef(fitMr),confint(bMr))
+MR_param<- cbind(coef(fitMr),confint(bMr))
 (MR_VBSum<- summary(fitMr))
 residPlot(fitMr)
 
@@ -213,11 +287,10 @@ bMc <- nlsBoot(fitMc)
 cbind(coef(fitMr),confint(bMc))
 (MC_VBSum<- summary(fitMc))
 residPlot(fitMc)
+
 ```
 
-
-```{r, Summary of model parameters}
-MVB<-rbind(fitMc,fitMr)
+```{r, Summary of male model parameters}
 
 (MrVB_Table<- tbl_regression(fitMr)%>%  
   add_significance_stars(hide_p = FALSE, pattern = "{p.value}") %>%
@@ -228,10 +301,10 @@ MVB<-rbind(fitMc,fitMr)
   add_significance_stars(hide_p = FALSE,  pattern = "{p.value}") %>%
   add_glance_table(
     include = c(nobs, logLik, AIC, BIC)))
-    ```
 
-
-### Male plotting
+```
+ 
+## Male plot creation
 
 ```{r}
 ##Rose predictions
@@ -261,64 +334,33 @@ ggsave("M_VBGrowth.jpeg", device="jpeg", plot=MaleVBPlot1, path="G:/POP_STRUCTUR
 ```{r, echo=FALSE}
 Female$Site<- as.factor(Female$Site)
 (FVB <- vbStarts(Total.Length~Age,data=Female))
-(FemaleLKt<- Map(rep, FVB, c(2,2,2)))
+(FLKt<- Map(rep, FVB, c(2,2,2)))
 
 Ffit0 <- nls(vbO,data=Female,start=FVB)
 summary(Ffit0)
 
-FfitLKt <- nls(vbLK,data=Female,start=FemaleLKt)
+FfitLKt <- nls(vbLK,data=Female,start=FLKt)
 summary(FfitLKt)
 
 loglik0<- logLik(Ffit0)
 loglikF<- logLik(FfitLKt)
 
-(lrt<- lrtest(Ffit0, FfitLKt))
-Ftest_table<- cbind(loglik0, loglikF, lrt)
-Ftest_table<- Ftest_table[2,c(1,2,5,6,7)] %>% round(3)
+(Flrt<- lrt(Ffit0, com=FfitLKt,com.name="All pars diff",
+sim.names=c("no pars diff")))
+
+Ftest_table<- cbind(loglik0, loglikF, Flrt)
+Ftest_table<- Ftest_table[, c(1,2,7,9,10)] %>% round(3)
 Ftest_table$Sex<- "Female"
-  
-```
-
-
-### Fitting female Von Bertalanffy models for Rose and Cobb, and summarizing model fit
-
-```{r, Rose fit}
-##Rose
-
-rgFr<- filter(Female, Site=="Rose")
-rgFr$Total.Length<- as.numeric(rgFr$Total.Length)
-
-fitFr<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=rgFr, start=FVB)
-bFr <- nlsBoot(fitFr)
-cbind(coef(fitFr),confint(bFr))
-(FR_VBSum<- summary(fitFr))
-residPlot(fitFr)
-
-```
-
-
-```{r, Cobb fit}
-##Cobb
-
-rgFc<- filter(Female, Site=="Cobb")
-rgFc$Total.Length<- as.numeric(rgFc$Total.Length)
-
-#fitFc<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=rgFc, start=FVB, control=list(maxiter=100,minFactor=1/5000), algorithm="port", lower=list(Linf=1,K=-1,t0=-4), upper=list(Linf=500,K=1,t0=1))
-#bFc <- nlsBoot(fitFc)
-#cbind(coef(fitFc),confint(bFc))
-#FC_VBSum<- summary(fitFc)
-
 ```
 
 #Joined females
 ```{r}
 
-
 fitF<- nls(Total.Length~vbTyp(Age, Linf, K, t0), data=Female, start=FVB)
 bF <- nlsBoot(fitF)
 cbind(coef(fitF),confint(bF))
 (F_VBSum<- summary(fitF))
-residPlot(fitFr)
+residPlot(fitF)
 
 (F_VB_Table<- tbl_regression(fitF)%>%  
   add_significance_stars(hide_p = FALSE, pattern = "{p.value}") %>%
@@ -338,61 +380,20 @@ ggsave("F_VBGrowth.jpeg", device="jpeg", plot=FemaleVBPlot, path="G:/POP_STRUCTU
 ```
 
 
-
-
-
-
-
-
-```{r, Summary of model parameters}
-#FVB<-rbind(fitFr, fitFc)
-
-(FrVB_Table<- tbl_regression(fitFr)%>%  
-  add_significance_stars(hide_p = FALSE, pattern = "{p.value}") %>%
-  add_glance_table(
-    include = c(nobs, logLik, AIC, BIC))  )
-
-#(FcVB_Table<- tbl_regression(fitFc)%>%  
-#  add_significance_stars(hide_p = FALSE, pattern = "{p.value}") %>%
-#  add_glance_table(
-#    include = c(nobs, logLik, AIC, BIC))  )
-    ```
-
-
-### Female plotting
-
-```{r}
-##Rose predictions
-xfr<- seq(min(rgFr$Age), max(rgFr$Age), length.out=199)
-pfr<- vbTyp(xfr, Linf=coef(fitFr))
-roseFVB<- as.data.frame(cbind(xfr, pfr))
-
-##Cobb predictions
-xfc<- seq(min(rgFc$Age), max(rgFc$Age), length.out=199)
-
-```
-
-
-```{r}
-(FemaleVBPlot<- ggplot(data=Female)+geom_point(aes(x=Age, y=Total.Length, color=Site, shape=Site))+ theme_classic () + geom_line(data=roseFVB, aes(x=xfr, y=pfr), color="black") + labs(x = "Age",  y = "Total Length (mm)") + ylim(50,230) + scale_color_manual(values = c("Rose" = "black", "Cobb" = "grey")) + ggtitle("Female") +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")) 
-
-ggsave("F_VBGrowth.jpeg", device="jpeg", plot=FemaleVBPlot, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
-```
-
-
 ### Combined summaries- LRT for site differences; figure, parameter table
 
 ```{r}
-VB_LRT_table<- rbind(Mtest_table, Ftest_table)
+VB_LRT_table<- data.frame(rbind(Mtest_table, Ftest_table))
 
-VB_LRT_table_print<- VB_LRT_table %>% gt(rowname_col = "Sex") %>% tab_stubhead(label= md("**Sex**")) %>%  cols_label(
+(VB_LRT_table_print<- VB_LRT_table %>% gt(rowname_col = "Sex") %>% tab_stubhead(label= md("**Sex**")) %>%  cols_label(
     loglik0 = md("**Ln(L<sub>R</sub>)**"),
     loglikF = md("**Ln(L<sub>F</sub>)**"),
          Chisq = md("**X<sup>2</sup>**"),
-     "Pr(>Chisq)" = md("**P-value**"),
+     "Pr..Chisq." = md("**P-value**"),
       Df= md("**df**")
-  ) %>%  tab_footnote(
-    footnote = md("L<sub>F</sub> denotes maximum likelihood ratio for full model. L<sub>R</sub> denotes maximum likelihood ratio for reduced model."))
+  ) %>%
+  cols_width(Df~px(50), Chisq~px(50), everything()~px(100))  %>%  tab_footnote(
+    footnote = md("L<sub>F</sub> denotes maximum likelihood ratio for full (LKt) model. L<sub>R</sub> denotes maximum likelihood ratio for reduced (0) model.")))
 
 VB_LRT_table_print %>% gtsave(filename="VB_LRT_table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
 

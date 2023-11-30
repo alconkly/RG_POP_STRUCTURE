@@ -1,0 +1,304 @@
+---
+title: "Back Calculated Length at Age"
+author: "Anna Conklyn"
+date: "3/8/2023"
+output: html_document
+---
+
+# **Structure and Condition of an Established Round Goby Population in the Thousand Islands Region, St. Lawrence River**
+## *Back Calculated Length at Age*
+
+### Contents of Rmarkdown:
+  > 1. Data setup, convert from one-fish-per-line to one-measurement-per-line
+  > 2. Linear regression fitting of otolith radius vs. total length to aquire coefficients for back calculation
+  > 3. Back-calculate total lengths at age
+  > 4. Create summary tables and plots for predicted length-at-age
+  
+```{r setup, include=FALSE}
+##Install packages
+
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
+library(FSA)
+library(nlstools)
+library(magrittr)
+library(dplyr)
+library(plotrix)
+library(nnet)
+library(nls2)
+library(ggplot2)
+library(tidyr)
+library(broom)
+library(stargazer)
+library(plyr)
+library(gt)
+library(gtsummary)
+library(stringr)
+library(lattice)
+library(car)
+library(multcomp)
+library(readxl)
+```
+
+
+```{r, include=FALSE}
+##Load data
+
+
+getwd()
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
+RG <- read_excel("Pop_Strucutre_Dissected.xlsx")
+
+RG<- filter(RG, Age != "NA")
+```
+
+
+
+#### 1. Data setup, convert from one-fish-per-line to one-measurement-per-line
+
+```{r, include=FALSE}
+RG$yearclass<-RG$Year-RG$Age
+
+Male<- filter(RG, Sex== "M")
+Female<- filter(RG, Sex=="F")
+```
+
+
+```{r, include=FALSE}
+RG_long_M<- Male %>% pivot_longer(cols = c( 'RadAnnu0', 'RadAnnu1', 'RadAnnu2', 'RadAnnu3', 'RadAnnu4', 'RadAnnu5'), names_to = "AgeRad", values_to = "Rad")
+RG_long_M$AgeRad<- str_remove_all(RG_long_M$AgeRad, "[RadAnnu]")
+RG_long_M$AgeRad<- as.numeric(RG_long_M$AgeRad)
+
+RG_long_F<- Female %>% pivot_longer(cols = c( 'RadAnnu0', 'RadAnnu1', 'RadAnnu2', 'RadAnnu3', 'RadAnnu4', 'RadAnnu5'), names_to = "AgeRad", values_to = "Rad")
+RG_long_F$AgeRad<-str_remove_all(RG_long_F$AgeRad, "[RadAnnu]")
+RG_long_F$AgeRad<- as.numeric(RG_long_F$AgeRad)
+```
+
+
+### 2. Linear regression fitting of otolith radius vs. total length to aquire coefficients for back calculation
+
+#### Male
+
+```{r, echo=FALSE}
+BodyOR_M<- lm(log(Total.Length) ~ log(OR), data=Male) 
+(BodyOR_M_Summary<- coef(BodyOR_M))
+a_M<- coef(BodyOR_M)[2]
+```
+
+#### Female
+```{r, echo=FALSE}
+BodyOR_F<- lm(log(Total.Length) ~ log(OR), data=Female) 
+(BodyOR_F_Summary<- coef(BodyOR_F))
+a_F<- coef(BodyOR_M)[2]
+```
+
+### 3. Back-calculate total lengths at age
+
+$$ TL_{n} = TL * (OR_{n}/OR)^a $$
+TL_{n} is the total length at annulus n; TL, observed total length; OR_{n} otolith radius at annulus n; OR, otolith radius at capture; a, the slope of linear function between logarithm of total length and logarithm of total radius 
+
+#### Male
+```{r, echo=FALSE}
+RG_long_M$Pred_len<- with(RG_long_M, (Total.Length)*(Rad/OR)^a_M)
+
+ggplot(RG_long_M,aes(Pred_len)) + geom_histogram(aes(fill=Site)) + theme_classic() + scale_fill_manual(values = c("Rose" = "black", "Cobb" = "grey")) +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")
+```
+
+#### Female
+```{r, echo=FALSE}
+RG_long_F$Pred_len<- with(RG_long_F, (Total.Length)*(Rad/OR)^a_F)
+
+ggplot(RG_long_F,aes(Pred_len)) + geom_histogram(aes(fill=Site)) + theme_classic() + scale_fill_manual(values = c("Rose" = "black", "Cobb" = "grey")) +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")
+```
+
+
+
+
+
+
+
+
+
+
+
+# Statistical differences 
+
+
+```{r, echo=FALSE}
+
+MaleBC_Site<- lm(AgeRad~ Pred_len * Site, data = RG_long_M)
+(MaleBC_Site_Sum<- summary(MaleBC_Site))
+residualPlots(MaleBC_Site)
+
+(MaleBC_Site_regression<- tbl_regression(MaleBC_Site) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") %>%
+  add_glance_table(
+    include = c(nobs, r.squared)))
+
+
+(MaleBC_table<-Anova(MaleBC_Site))
+rownames(MaleBC_table)[rownames(MaleBC_table) == "AgeRad"] <- "Age"
+rownames(MaleBC_table)[rownames(MaleBC_table) == "AgeRad:Site"] <- "Age:Site"
+MaleBC_table$rownames<- rownames(MaleBC_table)
+
+(MaleBC_table_print <- MaleBC_table %>% gt(rowname_col = "rownames") %>% fmt_number(columns = c("Sum Sq" , "F value"),  decimals = 2)  %>% tab_header( title = md("**Male**")))
+
+
+```
+
+
+
+
+
+```{r}
+FemaleBC_Site<- lm(AgeRad ~ Pred_len*Site, data = RG_long_F)
+(FemaleBC_Site_Sum<- summary(FemaleBC_Site))
+residualPlots(FemaleBC_Site)
+(FemaleBC_table<-Anova(FemaleBC_Site, type = 3))
+rownames(FemaleBC_table)[rownames(FemaleBC_table) == "AgeRad"] <- "Age"
+rownames(FemaleBC_table)[rownames(FemaleBC_table) == "AgeRad:Site"] <- "Age:Site"
+FemaleBC_table$rownames<- rownames(FemaleBC_table)
+
+(FemaleBC_Site_regression<- tbl_regression(FemaleBC_Site) %>%  
+  add_significance_stars(hide_p = FALSE,
+                           pattern = "{p.value}{stars}") %>%
+  add_glance_table(
+    include = c(nobs, r.squared)))
+
+
+
+(FemaleBC_table_print <- FemaleBC_table %>% gt(rowname_col = "rownames") %>% fmt_number(columns = c("Sum Sq" , "F value"),  decimals = 2)  %>% tab_header( title = md("**Male**")))
+```
+```{r}
+(BC_Regression_Table<- tbl_merge(
+    tbls = list(MaleBC_Site_regression, FemaleBC_Site_regression),
+    tab_spanner = c("**Male**", "**Female**")
+  ) %>% as_gt())
+ 
+BC_Regression_Table %>% gtsave(filename="BC_Test_Table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+```
+
+
+
+
+### Create summary tables and plots for predicted length-at-age
+
+### F-test for equality of slopes for back-calculated length at age regression
+
+
+```{r, echo=FALSE}
+
+MaleBC_table$Sex<-"Male"
+FemaleBC_table$Sex<-"Female"
+
+FullBC_ANCOVA_table<- rbind(MaleBC_table, FemaleBC_table)
+
+(FullBC_ANCOVA<- gt(FullBC_ANCOVA_table, rowname_col = "rownames", groupname_col = "Sex") %>% fmt_number(columns = c("Sum Sq" , "F value", "Pr(>F)"),  decimals = 2) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_group()) %>% 
+  tab_style(
+    style = cell_text( weight = "bold", align = "left"),
+    locations = cells_column_labels()
+  ))
+  
+FullBC_ANCOVA %>% gtsave(filename = "BCANCOVA table.png", path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures")
+
+```
+
+
+
+#### Rose Male Predictions
+
+```{r, echo=FALSE}
+RG_long_M_Rose<- filter(RG_long_M, Site=="Rose")
+M_R_BC_Sum<- Summarize(Pred_len~AgeRad,data=RG_long_M_Rose,digits=2)
+M_R_BC_Sum$Sex<- "Rose Male"
+
+(Male_Rose_BC_table =  gt(M_R_BC_Sum[1:4], rowname_col = "AgeRad") %>% cols_hide(columns="n") %>% tab_header(title="Rose Male") %>% cols_label(
+    nvalid = "n",
+    mean = "mean") %>% cols_align(align = "left") %>%
+  tab_stubhead(label = "Age") %>% tab_options(table.width = pct(50))%>% cols_width(everything() ~ px(100)))
+```
+
+#### Cobb Male Predictions
+
+```{r, echo=FALSE}
+RG_long_M_Cobb<- filter(RG_long_M, Site=="Cobb")
+M_C_BC_Sum<- Summarize(Pred_len~AgeRad,data=RG_long_M_Cobb,digits=2)
+M_C_BC_Sum$Sex<- "Cobb Male"
+
+
+(Male_Cobb_BC_table =  gt(M_C_BC_Sum[1:4], rowname_col = "AgeRad") %>% cols_hide(columns="n") %>% tab_header(title="Cobb Male") %>% cols_label(
+    nvalid = "n",
+    mean = "mean") %>% cols_align(align = "left") %>%
+  tab_stubhead(label = "Age") %>% tab_options(table.width = pct(50))%>% cols_width(everything() ~ px(100)))
+```
+
+
+## Cobb Females
+```{r, echo=FALSE}
+RG_long_F_Cobb<- filter(RG_long_F, Site=="Cobb")
+F_C_BC_Sum<- Summarize(Pred_len~AgeRad,data=RG_long_F_Cobb,digits=2)
+F_C_BC_Sum$Sex<- "Cobb Female"
+
+(Female_Cobb_BC_table = gt(F_C_BC_Sum[1:5], rowname_col = "AgeRad") %>% cols_hide(columns="n") %>% tab_header(title="Cobb Female") %>% cols_label(
+    nvalid = "n",
+    mean = "mean") %>% cols_align(align = "left") %>%
+  tab_stubhead(label = "Age") %>% tab_options(table.width = pct(50))%>% cols_width(everything() ~ px(100)))
+```
+
+## Rose Females
+```{r, echo=FALSE}
+RG_long_F_Rose<- filter(RG_long_F, Site=="Rose")
+F_R_BC_Sum<- Summarize(Pred_len~AgeRad,data=RG_long_F_Rose,digits=2)
+F_R_BC_Sum$Sex<- "Rose Female"
+
+(Female_Rose_BC_table = gt(F_R_BC_Sum[1:5], rowname_col = "AgeRad") %>% cols_hide(columns="n") %>% tab_header(title="Cobb Female") %>% cols_label(
+    nvalid = "n",
+    mean = "mean") %>% cols_align(align = "left") %>%
+  tab_stubhead(label = "Age") %>% tab_options(table.width = pct(50))%>% cols_width(everything() ~ px(100)))
+```
+
+```{r}
+
+FullBC<- rbind(M_R_BC_Sum, M_C_BC_Sum, F_R_BC_Sum, F_C_BC_Sum)
+FullBC <- FullBC 
+
+(FullBC_Table= gt(FullBC, rowname_col = "AgeRad", groupname_col = "Sex") %>% cols_hide(columns=c("n", "min", "Q1", "median", "Q3", "max")) %>% tab_header(title= md("**Mean back-calculated length-at-age**")) %>% cols_label(
+    nvalid = md("**n**"),
+    mean = md("**Mean**"), sd = md("**SD**")) %>% cols_align(align = "left") %>%
+  tab_stubhead(label = md("**Age**")) %>% tab_options(table.width = pct(50)) %>% cols_width(everything() ~ px(100)) )
+
+ 
+FullBC_Table %>% gtsave(filename="BC_Table.png", path="G:/POP_STRUCTURE_PUB/Figures")
+```
+
+
+
+## Jitter plot for back calculated length-at-age
+
+``` {r}
+(M_BC_jitter<- ggplot(RG_long_M, aes(AgeRad, Pred_len)) + geom_jitter(aes(colour=Site)) +  facet_wrap(vars(Age)) + ylim (0,300) + xlim(0,5) + ylab ("Back-Calculated Length (mm)") + xlab ("Age (Jittered)") + labs(title = "Male") + theme_classic () + scale_color_manual(values = c("Rose" = "black", "Cobb" = "grey")) +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+M_BC_jitter %>% ggsave(filename="Male BC_jitter.png", path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+
+```
+
+```{r}
+(F_BC_jitter<- ggplot(RG_long_F, aes(AgeRad, Pred_len)) + geom_jitter(aes(colour=Site)) + facet_wrap(vars(Age)) + ylim (0,300) + xlim(0,5) + ylab ("Back-Calculated Length (mm)") + xlab ("Age (Jittered)") + labs(title = "Female") + theme_classic () + scale_color_manual(values = c("Rose" = "black", "Cobb" = "grey")) +  theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+ F_BC_jitter %>% ggsave(filename="Female BC_jitter.png", path="G:/POP_STRUCTURE_PUB/Figures")
+
+```
+
+```{r}
+(BCplot <- ggarrange(M_BC_jitter+ rremove ("ylab"), F_BC_jitter+ rremove ("ylab"),
+                    nrow = 2, common.legend = TRUE, legend="bottom"))
+
+(BCplot<- annotate_figure(BCplot,left=text_grob("Back-Calculated Total Length (mm)", rot = 90, size = 15)))
+
+ggsave("BCplot.jpeg", device="jpeg", plot=BCplot, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+```
+
+
