@@ -80,89 +80,7 @@ RG.F<-AllRG %>% filter(Sex=="F")
 ```
 
 
-### 2. Monthly condition index analysis: HSI
-
-### Male HSI
-
-#### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
-
-```{r, echo=FALSE}
-
-shapiro.test(RG.M$HSI)
-kruskal.test(HSI ~ Month, data = RG.M)
-(MHSI_Comp<- dunn_test(HSI ~ Month, data = RG.M, p.adjust.method = "holm"))
-
-```
-
-#### b. Summary statistics and monthly plot creation
-
-```{r, echo=FALSE}
-(M_HSI_Summary<-(summarySE(RG.M, measurevar="HSI", groupvars=c("Site", "Month"))))
-M_HSI_Summary<- M_HSI_Summary %>% filter(Month != "June") %>% filter(Month != "September")
-
-(HSI_M_line<- ggplot(M_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site))  + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Male") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + ylim(0, 6) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
-
-
-```
-
-
-```{r, echo=FALSE}
-(HSI_M_box<- ggplot(RG.M, aes(x=Month, y=HSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Male") + ylim(0, 8) + scale_fill_manual(values=c("black", "grey")) + labs(fill = "Sex") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15))+theme_classic ())
-
-```
-
-
-
-
-### Female HSI
-
-#### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
-```{r, echo=FALSE}
-shapiro.test(RG.F$HSI)
-kruskal.test(HSI ~ Month, data = RG.F)
-(FHSI_Comp<- dunn_test(HSI ~ Month, data = RG.F, p.adjust.method = "holm"))
-```
-
-#### b. Summary statistics and monthly plot creation
-
-```{r, echo=FALSE}
-(F_HSI_Summary<-(summarySE(RG.F, measurevar="HSI", groupvars=c("Site", "Month"))))
-
-(HSI_F_line<- ggplot(F_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site)) + ylim(0, 6) + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Female") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
-
-```
-
-```{r, echo=FALSE}
-(HSI_F_box<- ggplot(RG.F, aes(x=Month, y=HSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Female") + ylim(0, 8) + scale_fill_manual(values=c("black", "grey")) + labs(fill = "Sex") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ())
-
-```
-
-
-### c. M-F plot bind
-
-```{r, echo=FALSE}
-HSI_LINE<- ggarrange(HSI_M_line + rremove ("ylab"), HSI_F_line + rremove ("ylab"), ncol = 1, nrow = 2, common.legend = TRUE, hjust = c(-0.8, -0.5), legend = "bottom")
-
-(HSI_LINE<- annotate_figure(HSI_LINE, left= text_grob("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)", rot = 90, size = 15)))
-
-ggsave("HSI_LINE.jpeg", device="jpeg", plot=HSI_LINE, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
-```
-
-```{r}
-(M_GSI_Scatter<- ggplot(data = RG.M) + geom_point(aes(x=Total.Length, y=GSI*100, color=Month, shape = Site)) + labs(y="GSI (Gonad Weight/Total Weight * 100)", x="Total Length (mm)", title = "Male") + ylim(0, 20) + geom_hline(yintercept=1, linetype="dashed", size=1) + scale_colour_brewer(palette ="RdBu" , name = "Month", labels = c("May", "July", "August", "October"), direction = -1 )+theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom"))
-
-(F_GSI_Scatter<- ggplot(data = RG.F) + geom_point(aes(x=Total.Length, y=GSI*100, color=Month, shape = Site)) + labs(y=NULL, x="Total Length (mm)", title = "Female") + ylim(0, 20) +  geom_hline(yintercept=5, linetype="dashed", size=1) +  scale_colour_brewer(palette ="RdBu" , name = "Month", labels = c("May", "July", "August", "October"), direction = -1 )+theme_classic ()+ theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom"))
-
-(GSI_Scatter<- ggarrange(M_GSI_Scatter, F_GSI_Scatter,
-                    ncol = 2, common.legend = TRUE, legend="bottom"))
-
- 
- ggsave("JOINED_GSI.jpeg", device="jpeg", plot=GSI_Scatter, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
-```
-
-
-
-### 2. Monthly condition index analysis: GSI
+## 2. Monthly condition index analysis: GSI
 
 ### Male GSI
 
@@ -221,7 +139,7 @@ F_GSI<- ggplot(RG.F, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position
 
 
 
-### c. M-F plot bind
+## M-F plot bind
 
 ```{r, echo=FALSE}
 GSI_LINE<- ggarrange(GSI_M_line + rremove ("ylab"), GSI_F_line + rremove ("ylab") , ncol = 1, nrow = 2, common.legend = TRUE, hjust = c(-1.5, -1), legend = "bottom")
@@ -231,14 +149,95 @@ GSI_LINE<- ggarrange(GSI_M_line + rremove ("ylab"), GSI_F_line + rremove ("ylab"
 ggsave("GSI_LINE.jpeg", device="jpeg", plot=GSI_LINE, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
 ```
 
-
-
-
-### 2. Monthly condition index analysis: K
-
-# Add not-dissected 
 ```{r}
+(M_GSI_Scatter<- ggplot(data = RG.M) + geom_point(aes(x=Total.Length, y=GSI*100, color=Month, shape = Site)) + labs(y="GSI (Gonad Weight/Total Weight * 100)", x="Total Length (mm)", title = "Male") + ylim(0, 20) + geom_hline(yintercept=1, linetype="dashed", size=1) + scale_colour_brewer(palette ="RdBu" , name = "Month", labels = c("May", "July", "August", "October"), direction = -1 )+theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom"))
+
+(F_GSI_Scatter<- ggplot(data = RG.F) + geom_point(aes(x=Total.Length, y=GSI*100, color=Month, shape = Site)) + labs(y=NULL, x="Total Length (mm)", title = "Female") + ylim(0, 20) +  geom_hline(yintercept=5, linetype="dashed", size=1) +  scale_colour_brewer(palette ="RdBu" , name = "Month", labels = c("May", "July", "August", "October"), direction = -1 )+theme_classic ()+ theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom"))
+
+(GSI_Scatter<- ggarrange(M_GSI_Scatter, F_GSI_Scatter,
+                    ncol = 2, common.legend = TRUE, legend="bottom"))
+
+ 
+ ggsave("JOINED_GSI.jpeg", device="jpeg", plot=GSI_Scatter, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 7.48031, height = 5)
+```
+
+
+# 2. Monthly condition index analysis: HSI
+
+### Male HSI
+
+#### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
+
+```{r, echo=FALSE}
+
+shapiro.test(RG.M$HSI)
+kruskal.test(HSI ~ Month, data = RG.M)
+(MHSI_Comp<- dunn_test(HSI ~ Month, data = RG.M, p.adjust.method = "holm"))
+
+```
+
+#### b. Summary statistics and monthly plot creation
+
+```{r, echo=FALSE}
+(M_HSI_Summary<-(summarySE(RG.M, measurevar="HSI", groupvars=c("Site", "Month"))))
+M_HSI_Summary<- M_HSI_Summary %>% filter(Month != "June") %>% filter(Month != "September")
+
+(HSI_M_line<- ggplot(M_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site))  + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Male") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + ylim(0, 6) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+
+```
+
+
+```{r, echo=FALSE}
+(HSI_M_box<- ggplot(RG.M, aes(x=Month, y=HSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Male") + ylim(0, 8) + scale_fill_manual(values=c("black", "grey")) + labs(fill = "Sex") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15))+theme_classic ())
+
+```
+
+
+### Female HSI
+
+#### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
+```{r, echo=FALSE}
+shapiro.test(RG.F$HSI)
+kruskal.test(HSI ~ Month, data = RG.F)
+(FHSI_Comp<- dunn_test(HSI ~ Month, data = RG.F, p.adjust.method = "holm"))
+```
+
+#### b. Summary statistics and monthly plot creation
+
+```{r, echo=FALSE}
+(F_HSI_Summary<-(summarySE(RG.F, measurevar="HSI", groupvars=c("Site", "Month"))))
+
+(HSI_F_line<- ggplot(F_HSI_Summary, aes(y=HSI*100, x=Month, colour=Site)) + ylim(0, 6) + ylab("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)") + labs(title = "Female") + geom_errorbar(aes(ymin=(HSI-se)*100, ymax=(HSI+se)*100), width=.1) + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom"))
+
+```
+
+```{r, echo=FALSE}
+(HSI_F_box<- ggplot(RG.F, aes(x=Month, y=HSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs(y=NULL, x = NULL, title = "Female") + ylim(0, 8) + scale_fill_manual(values=c("black", "grey")) + labs(fill = "Sex") + theme(legend.position = c(0.8, 0.8), axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ())
+
+```
+
+
+## M-F plot bind
+
+```{r, echo=FALSE}
+HSI_LINE<- ggarrange(HSI_M_line + rremove ("ylab"), HSI_F_line + rremove ("ylab"), ncol = 1, nrow = 2, common.legend = TRUE, hjust = c(-0.8, -0.5), legend = "bottom")
+
+(HSI_LINE<- annotate_figure(HSI_LINE, left= text_grob("Hepatosomatic Index \n (Liver Weight/Total Weight * 100)", rot = 90, size = 15)))
+
+ggsave("HSI_LINE.jpeg", device="jpeg", plot=HSI_LINE, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+```
+
+
+
+# 2. Monthly condition index analysis: K
+
+
+```{r}
+# Add not-dissected 
+setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
 RG_Dissected <- read_excel("Pop_Strucutre_Dissected.xlsx")
+
 RG_Dissected<- RG_Dissected %>% dplyr:: select("Date", "Total.Mass", "Total.Length", "Sex", "Site", "Month", "Year")
 
 
@@ -262,7 +261,7 @@ RG.M<-AllRG %>% filter(Sex=="M")
 RG.F<-AllRG %>% filter(Sex=="F")
 ```
 
-### Male K
+## Male K
 
 #### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
 
@@ -290,9 +289,7 @@ ggsave("K_Lineplot_male.jpeg", device="jpeg", plot=K_M_line, path="G:/POP_STRUCT
 ```
 
 
-
-
-### Female K
+## Female K
 
 
 #### a. Normality tests (Shapiro Wilk) & Kruskal Wallis and dunn test post hoc multiple comparison
@@ -322,7 +319,7 @@ ggsave("K_Lineplot_female.jpeg", device="jpeg", plot=K_F_line, path="G:/POP_STRU
 ```
 
 
-### c. M-F plot bind
+## M-F plot bind
 
 ```{r, echo=FALSE}
 K_LINE<-ggarrange(K_M_line + rremove ("ylab"), K_F_line +  rremove ("ylab"), ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom" , hjust = c(-1, -0.7))
