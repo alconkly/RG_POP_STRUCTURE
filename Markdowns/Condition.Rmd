@@ -52,8 +52,7 @@ library(Rmisc)
 
 
 ```{r, include = FALSE}
-setwd("G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE")
-AllRG <- read_excel("Pop_Strucutre_Dissected.xlsx")
+AllRG <- read_excel("C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Data/Pop_Strucutre_Dissected.xlsx")
 ```
 
 
@@ -96,7 +95,7 @@ kruskal.test(GSI ~ Month, data = RG.M)
 ```{r, echo=FALSE}
 (M_GSI_Summary<-(summarySE(RG.M, measurevar="GSI", groupvars=c("Site", "Month"), na.rm = TRUE)))
 
-(GSI_M_line<- ggplot(M_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1)+ labs(title = "Male") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black"))  +geom_hline(yintercept=1, linetype="dashed", size=1) + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
+(GSI_M_line<- ggplot(M_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1)+ labs(title = "Male") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black"))  +geom_hline(yintercept=1, linetype="dashed", size=1) + theme(text = element_text(size = 12), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
 
 ggsave("GSI_Lineplot_male.jpeg", device="jpeg", plot=GSI_M_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
 
@@ -125,15 +124,15 @@ kruskal.test(GSI ~ Month, data = RG.F)
 ```{r, echo=FALSE}
 (F_GSI_Summary<-(summarySE(RG.F, measurevar="GSI", groupvars=c("Site", "Month"), na.rm = TRUE)))
 
-(GSI_F_line<- ggplot(F_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1) + labs(title = "Female") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + geom_hline(yintercept=5, linetype="dashed", size=1)  + theme(plot.margin = margin(t=0.5, l=0.5, r=0.5, b=0.5, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
+(GSI_F_line<- ggplot(F_GSI_Summary, aes(y=GSI*100, x=Month, colour=Site)) + ylim(0, 10) + geom_errorbar(aes(ymin=(GSI-se)*100, ymax=(GSI+se)*100), width=.1) + labs(title = "Female") + geom_point() + geom_line(aes(group=Site))+ theme_classic () + scale_colour_manual(values=c( "grey","black")) + geom_hline(yintercept=5, linetype="dashed", size=1)  + theme(text = element_text(size = 12), legend.position = "bottom") + ylab("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)"))
 
-ggsave("GSI_Lineplot_female.jpeg", device="jpeg", plot=GSI_F_line, path="G:/POP_STRUCTURE_PUB/Figures", dpi="retina", width = 6.5, height = 5)
+ggsave("GSI_Lineplot_female.tiff", device="tiff", plot=GSI_F_line, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures/TIFFs", dpi="retina", width = 6.5, height = 5)
 
 ```
 
 
 ```{r, echo=FALSE}
-F_GSI<- ggplot(RG.F, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs( y=NULL, x = NULL, title = "Female", fill = "Site") + ylim(0, 20) + scale_fill_manual(values=c("black", "Grey "))  +  geom_hline(yintercept=5, linetype="dashed", size=1) + theme (axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 15), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ()
+F_GSI<- ggplot(RG.F, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position=position_dodge(1)) + labs( y=NULL, x = NULL, title = "Female", fill = "Site") + ylim(0, 20) + scale_fill_manual(values=c("black", "Grey "))  +  geom_hline(yintercept=5, linetype="dashed", size=1) + theme (axis.text.x = element_text( size = 12), axis.text.y = element_text( size = 12), axis.title.x = element_text( size = 12), axis.title.y = element_text( size = 13), legend.text = element_text(size=13), legend.title = element_text(size=15)) +theme_classic ()
 
 ```
 
@@ -142,11 +141,11 @@ F_GSI<- ggplot(RG.F, aes(x=Month, y=GSI*100, fill=Site)) + geom_boxplot(position
 ## M-F plot bind
 
 ```{r, echo=FALSE}
-GSI_LINE<- ggarrange(GSI_M_line + rremove ("ylab"), GSI_F_line + rremove ("ylab") , ncol = 1, nrow = 2, common.legend = TRUE, hjust = c(-1.5, -1), legend = "bottom")
+GSI_LINE<- ggarrange(GSI_M_line + rremove ("ylab"), GSI_F_line + rremove ("ylab") , ncol = 1, nrow = 2, common.legend = TRUE, legend = "bottom")
 
-(GSI_LINE<- annotate_figure(GSI_LINE, left= text_grob("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)", rot = 90, size = 15)))
+(GSI_LINE<- annotate_figure(GSI_LINE, left= text_grob("Gonadosomatic Index \n (Gonad Weight/Total Weight * 100)", rot = 90, size = 12)))
 
-ggsave("GSI_LINE.jpeg", device="jpeg", plot=GSI_LINE, path="G:/Dissertation/Chapter 2- pop structure/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+ggsave("GSI_LINE.tiff", device="tiff", plot=GSI_LINE, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures/TIFFs", dpi="retina", width = 3.3, height = 5)
 ```
 
 ```{r}
