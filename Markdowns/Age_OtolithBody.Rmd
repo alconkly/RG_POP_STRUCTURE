@@ -85,7 +85,10 @@ Ageplot <- ggarrange(MAge_plot + rremove("ylab"), FAge_plot+ rremove("ylab"),
 
 (Ageplot<-annotate_figure(Ageplot,left=text_grob("Count", rot = 90, size = 12)))
 
-ggsave("Age_Histogram.tiff", device="tiff", plot=Ageplot, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures/TIFFs", dpi="retina", width = 3.3, height = 5)
+(Age_Histogram<-ggplot(RG, aes(x=Age, y=..count.., fill=Sex)) + geom_bar(color="black", position=position_dodge(1, preserve = "single")) + labs(x = "Age",  y = "Count") +  scale_fill_manual(values=c("grey", "black"))+ theme_classic () + xlim(1,5.5) + theme(text = element_text(size = 12), legend.position = "bottom"))
+
+
+ggsave("Age_Histogram.tiff", device="tiff", plot=Age_Histogram, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures/TIFFs", dpi="retina", width = 3.3, height = 3)
 ```
 
 
