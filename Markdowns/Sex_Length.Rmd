@@ -129,19 +129,19 @@ Rose_Summary %>% gtsave(filename="Rose_Length_Summary.png", path="C:/Users/ah235
 
 library(ggplot2)
 
-(Cobb_length_plot<-ggplot(Cobb, aes(x=Total.Length, fill=Sex)) + geom_histogram(binwidth = 10, color="black") + labs(x = "Total Length (mm)",  y = "Count", title="Cobb") + scale_fill_grey() + theme_classic ()+ scale_fill_grey() + theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom") + ylim(0,250)+ xlim(0,250))
+(Cobb_length_plot<-ggplot(Cobb, aes(x=Total.Length, fill=Sex)) + geom_histogram(binwidth = 10, color="black") + labs(x = "Total Length (mm)",  y = "Count", title="Cobb") + scale_fill_grey() + theme_classic ()+ scale_fill_grey() + theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom") + ylim(0,250)+ xlim(0,250))
 ggsave("Cobb_lengthCounts.jpeg", device="jpeg", plot=Cobb_length_plot, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 5)
 
-(Rose_length_plot<-ggplot(Rose, aes(x=Total.Length, fill=Sex)) + geom_histogram(binwidth = 10, color="black") + labs(x = "Total Length (mm)",  y = "Count", title="Rose") + scale_fill_grey() + theme_classic ()+ scale_fill_grey() + theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 15), legend.position = "bottom")+ ylim(0,250)+ xlim(0,250))
+(Rose_length_plot<-ggplot(Rose, aes(x=Total.Length, fill=Sex)) + geom_histogram(binwidth = 10, color="black") + labs(x = "Total Length (mm)",  y = "Count", title="Rose") + scale_fill_grey() + theme_classic ()+ scale_fill_grey() + theme_classic () + theme(plot.margin = margin(t=0.1, l=0.1, r=0.1, b=0.1, unit = "cm"), text = element_text(size = 12), legend.position = "bottom")+ ylim(0,250)+ xlim(0,250))
 ggsave("Rose_lengthCounts.jpeg", device="jpeg", plot=Rose_length_plot, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 5)
 
 Length_Histogram<- ggarrange(Cobb_length_plot + rremove ("ylab") , Rose_length_plot + rremove ("ylab"),
                     ncol = 1, nrow = 2, common.legend = TRUE, legend="bottom")
 
-(Length_Histogram<-annotate_figure(Length_Histogram,left=text_grob("Count", rot = 90, size = 15)))
+(Length_Histogram<-annotate_figure(Length_Histogram,left=text_grob("Count", rot = 90, size = 12)))
 
  
- ggsave("Length_Histogram.jpeg", device="jpeg", plot=Length_Histogram, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures", dpi="retina", width = 7.48031, height = 9)
+ ggsave("Length_Histogram.tiff", device="tiff", plot=Length_Histogram, path="C:/Users/ah2355/Documents/GitHub/RG_POP_STRUCTURE/Figures/TIFFs", dpi="retina", width = 3.3, height = 5)
 ```
 
 ### Shapiro-Wilk normality test and qqplots
